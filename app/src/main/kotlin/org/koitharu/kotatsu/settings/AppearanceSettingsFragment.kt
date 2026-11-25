@@ -1,0 +1,679 @@
+package org.koitharu.kotatsu.settings
+
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings as SystemSettings
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
+import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.MaterialTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.koitharu.kotatsu.core.util.ext.processLifecycleScope
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
+import org.koitharu.kotatsu.core.os.AppIcon
+import org.koitharu.kotatsu.core.os.AppIconManager
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
+import org.koitharu.kotatsu.main.ui.nav.DrawablePainter
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.LayerDrawable
+import org.koitharu.kotatsu.settings.compose.PreviewTile
+import org.koitharu.kotatsu.settings.compose.SettingsItem
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import dagger.hilt.android.AndroidEntryPoint
+import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.os.AppShortcutManager
+import org.koitharu.kotatsu.core.prefs.AppProtectionTimeout
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.prefs.ColorScheme
+import org.koitharu.kotatsu.core.prefs.ListMode
+import org.koitharu.kotatsu.core.prefs.ScreenshotsPolicy
+import org.koitharu.kotatsu.core.prefs.SearchSuggestionType
+import org.koitharu.kotatsu.core.ui.util.ActivityRecreationHandle
+import org.koitharu.kotatsu.core.util.LocaleComparator
+import org.koitharu.kotatsu.core.ui.ThemeSwitchCoverActivity
+import org.koitharu.kotatsu.core.util.ext.getLocalesConfig
+import org.koitharu.kotatsu.core.util.ext.sortedWithSafe
+import org.koitharu.kotatsu.core.util.ext.toList
+import org.koitharu.kotatsu.parsers.util.names
+import org.koitharu.kotatsu.parsers.util.toTitleCase
+import org.koitharu.kotatsu.settings.appearance.PreviewSettingsFragment
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.ColorSchemePickerRow
+import org.koitharu.kotatsu.settings.compose.KurohaTheme
+import org.koitharu.kotatsu.settings.compose.ListSettingsItem
+import org.koitharu.kotatsu.settings.compose.MultiSelectSettingsItem
+import org.koitharu.kotatsu.settings.compose.NavigationSettingsItem
+import org.koitharu.kotatsu.settings.compose.PreviewChoiceSettingsItem
+import org.koitharu.kotatsu.settings.compose.listModePreviewOptions
+import org.koitharu.kotatsu.settings.compose.themePreviewOptions
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SliderSettingsItem
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.compose.rememberIntPref
+import org.koitharu.kotatsu.settings.compose.rememberReadingIndicatorPref
+import org.koitharu.kotatsu.settings.compose.rememberStringPref
+import org.koitharu.kotatsu.settings.compose.rememberStringSetPref
+import org.koitharu.kotatsu.settings.nav.NavConfigFragment
+import org.koitharu.kotatsu.settings.protect.showProtectMethodDialog
+import javax.inject.Inject
+import org.koitharu.kotatsu.list.ui.GridColumns
+
+@AndroidEntryPoint
+class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearance) {
+
+	@Inject
+	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var activityRecreationHandle: ActivityRecreationHandle
+
+	@Inject
+	lateinit var appShortcutManager: AppShortcutManager
+
+	// Mirror the legacy fragment behavior: theme / AMOLED toggles must trigger an activity
+	// recreation so the new color scheme takes effect immediately.
+	private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+		when (key) {
+			AppSettings.KEY_THEME -> {
+				// Let the picked tile's outline move first, so the switch starts from the new selection.
+				view?.postDelayed({
+					activity?.let { ThemeSwitchCoverActivity.switchNightMode(it, settings.theme) }
+				}, 300)
+			}
+			AppSettings.KEY_APP_ICON -> activity?.takeUnless {
+				// e.g. Default in dark mode -> Static: the same launcher entry, so nothing to close for
+				AppIconManager.isApplied(it, settings)
+			}?.let { activity ->
+				// Android closes a task opened from the icon being switched off anyway, so close it ourselves
+				// first instead of letting it fall apart screen by screen.
+				val context = activity.applicationContext
+				activity.finishAffinity()
+				activity.finishAndRemoveTask()
+				processLifecycleScope.launch(Dispatchers.Default) {
+					AppIconManager.apply(context, settings)
+				}
+			}
+			AppSettings.KEY_COLOR_THEME,
+			AppSettings.KEY_THEME_AMOLED,
+			AppSettings.KEY_UI_SCALE -> {
+				activityRecreationHandle.recreateAll()
+			}
+			AppSettings.KEY_APP_LOCALE -> {
+				AppCompatDelegate.setApplicationLocales(settings.appLocales)
+			}
+		}
+	}
+
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			KurohaTheme {
+				AppearanceScreen(
+					dynamicShortcutsAvailable = appShortcutManager.isDynamicShortcutsAvailable(),
+					onOpenLocaleSettings = ::openSystemLocaleSettings,
+					onOpenDetailsAppearance = {
+						(activity as? SettingsActivity)?.openFragment(
+							PreviewSettingsFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+					onOpenNavConfig = {
+						(activity as? SettingsActivity)?.openFragment(
+							NavConfigFragment::class.java,
+							null,
+							isFromRoot = false,
+						)
+					},
+				)
+			}
+		}
+	}
+
+	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+		super.onViewCreated(view, savedInstanceState)
+		settings.subscribe(prefListener)
+	}
+
+	override fun onDestroyView() {
+		settings.unsubscribe(prefListener)
+		super.onDestroyView()
+	}
+
+	private fun openSystemLocaleSettings() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			val intent = Intent(
+				SystemSettings.ACTION_APP_LOCALE_SETTINGS,
+				Uri.fromParts("package", requireContext().packageName, null),
+			)
+			startActivity(intent)
+		}
+	}
+}
+
+@Composable
+private fun AppearanceScreen(
+	dynamicShortcutsAvailable: Boolean,
+	onOpenLocaleSettings: () -> Unit,
+	onOpenDetailsAppearance: () -> Unit,
+	onOpenNavConfig: () -> Unit,
+) {
+	val ctx = LocalContext.current
+
+	// Enum-backed array sources
+	val themeEntries = remember { ctx.resources.getStringArray(R.array.themes).toList() }
+	val themeValues = remember { ctx.resources.getStringArray(R.array.values_theme).toList() }
+
+	// Same names as the display options sheet on the lists themselves.
+	val listModeEntries = remember {
+		listOf(R.string.compact, R.string.details, R.string.grid, R.string.cover_only).map(ctx::getString)
+	}
+	val listModeValues = remember { ListMode.entries.names().toList() }
+	val badgeEntries = remember { ctx.resources.getStringArray(R.array.list_badges).toList() }
+	val badgeValues = remember { ctx.resources.getStringArray(R.array.values_list_badges).toList() }
+	val detailsTabEntries = remember { ctx.resources.getStringArray(R.array.details_tabs).toList() }
+	val detailsTabValues = remember { ctx.resources.getStringArray(R.array.details_tabs_values).toList() }
+	val readingIndicatorEntries = remember { ctx.resources.getStringArray(R.array.reading_indicator_modes).toList() }
+	val readingIndicatorValues = remember { ctx.resources.getStringArray(R.array.values_reading_indicator_modes).toList() }
+	val searchSuggestionEntries = remember {
+		SearchSuggestionType.entries.map { ctx.getString(it.titleResId) }
+	}
+	val searchSuggestionValues = remember { SearchSuggestionType.entries.names().toList() }
+	val locales = remember {
+		ctx.getLocalesConfig().toList().sortedWithSafe(LocaleComparator())
+	}
+	val localeEntries = remember(locales) {
+		listOf(ctx.getString(R.string.follow_system)) + locales.map { it.getDisplayName(it).toTitleCase(it) }
+	}
+	val localeValues = remember(locales) {
+		listOf("") + locales.map { it.toLanguageTag() }
+	}
+
+	// Bound preferences
+	var colorScheme by rememberStringPref(AppSettings.KEY_COLOR_THEME, ColorScheme.default.name)
+	var theme by rememberStringPref(AppSettings.KEY_THEME, "-1")
+	var amoled by rememberBooleanPref(AppSettings.KEY_THEME_AMOLED, false)
+	var appIcon by rememberStringPref(AppSettings.KEY_APP_ICON, AppIcon.DEFAULT.name)
+	var uiScale by rememberIntPref(AppSettings.KEY_UI_SCALE, 100)
+	var hapticFeedback by rememberBooleanPref(AppSettings.KEY_HAPTIC_FEEDBACK, true)
+	var hideStatusBar by rememberBooleanPref(AppSettings.KEY_HIDE_STATUS_BAR, false)
+	var locale by rememberStringPref(AppSettings.KEY_APP_LOCALE, "")
+	var listMode by rememberStringPref(AppSettings.KEY_LIST_MODE, ListMode.GRID.name)
+	var gridSize by rememberIntPref(AppSettings.KEY_GRID_SIZE, 100)
+	val gridWidth = remember { GridColumns.referenceWidth(ctx.resources) }
+	val maxGridColumns = remember { GridColumns.maxColumns(ctx.resources, gridWidth) }
+	var quickFilter by rememberBooleanPref(AppSettings.KEY_QUICK_FILTER, true)
+	var listCheckpoint by rememberBooleanPref(AppSettings.KEY_LIST_CHECKPOINT, true)
+	var readingIndicator by rememberReadingIndicatorPref(AppSettings.KEY_PROGRESS_INDICATORS)
+	val badgeDefaults = remember { ctx.resources.getStringArray(R.array.values_list_badges_default).toSet() }
+	var mangaListBadges by rememberStringSetPref(AppSettings.KEY_MANGA_LIST_BADGES, badgeDefaults)
+
+	var descriptionCollapse by rememberBooleanPref(AppSettings.KEY_COLLAPSE_DESCRIPTION, true)
+	var pagesTab by rememberBooleanPref(AppSettings.KEY_PAGES_TAB, true)
+	var detailsTab by rememberStringPref(AppSettings.KEY_DETAILS_TAB, "-1")
+
+	// Same default as AppSettings.searchSuggestionTypes: every type on until picked otherwise.
+	var searchSuggestions by rememberStringSetPref(AppSettings.KEY_SEARCH_SUGGESTION_TYPES, searchSuggestionValues.toSet())
+	var mainFab by rememberBooleanPref(AppSettings.KEY_MAIN_FAB, true)
+	var navLabels by rememberBooleanPref(AppSettings.KEY_NAV_LABELS, true)
+	var navPinned by rememberBooleanPref(AppSettings.KEY_NAV_PINNED, true)
+	var navLegacy by rememberBooleanPref(AppSettings.KEY_NAV_LEGACY, false)
+	var barBlur by rememberBooleanPref(AppSettings.KEY_BAR_BLUR, true)
+	var exitConfirm by rememberBooleanPref(AppSettings.KEY_EXIT_CONFIRM, false)
+	var dynamicShortcuts by rememberBooleanPref(AppSettings.KEY_SHORTCUTS, true)
+
+	SettingsScaffold {
+		// The color scheme picker is its own inline widget (horizontal cards), rendered
+		// directly here rather than via a SettingsGroup row.
+		item {
+			ColorSchemePickerRow(
+				title = stringResource(R.string.color_theme),
+				selectedValue = colorScheme,
+				onValueChange = { colorScheme = it },
+				shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+			)
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = "Theme") {
+				item { pos ->
+					PreviewChoiceSettingsItem(
+						title = stringResource(R.string.theme),
+						options = themePreviewOptions(themeEntries, amoled),
+						selectedIndex = themeValues.indexOf(theme),
+						onSelected = { theme = themeValues[it] }, // prefListener applies it
+						icon = R.drawable.ic_appearance,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					val isSystemDark = isSystemInDarkTheme()
+					val isDarkActive = when (theme.toIntOrNull()) {
+						AppCompatDelegate.MODE_NIGHT_YES -> true
+						AppCompatDelegate.MODE_NIGHT_NO -> false
+						else -> isSystemDark
+					}
+					SwitchSettingsItem(
+						title = stringResource(R.string.black_dark_theme),
+						subtitle = stringResource(R.string.black_dark_theme_summary),
+						checked = amoled,
+						onCheckedChange = { amoled = it },
+						icon = R.drawable.ic_eye_off,
+						enabled = isDarkActive,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SettingsItem(
+						title = stringResource(R.string.app_icon),
+						supporting = {
+							Column {
+								Text(
+									text = stringResource(R.string.app_icon_follows_theme),
+									style = MaterialTheme.typography.bodySmall,
+								)
+								Text(
+									text = stringResource(R.string.app_icon_summary),
+									style = MaterialTheme.typography.bodySmall,
+									color = MaterialTheme.colorScheme.error,
+								)
+							}
+						},
+						icon = R.drawable.ic_app_icon,
+						shape = pos.shape,
+						below = {
+							AppIconPicker(
+								selected = appIcon,
+								scheme = ColorScheme.entries.find { it.name == colorScheme } ?: ColorScheme.default,
+								isDark = isSystemInDarkTheme(),
+								isOled = amoled,
+								onSelect = { appIcon = it },
+							)
+						},
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.language),
+						entries = localeEntries,
+						entryValues = localeValues,
+						selectedValue = locale,
+						onValueChange = { locale = it },
+						icon = R.drawable.ic_language,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SliderSettingsItem(
+						title = stringResource(R.string.ui_scale),
+						value = uiScale,
+						valueFrom = 80,
+						valueTo = 120,
+						stepSize = 10,
+						valueLabel = { v ->
+							when {
+								v <= 80 -> ctx.getString(R.string.ui_scale_smallest)
+								v < 100 -> ctx.getString(R.string.ui_scale_smaller)
+								v == 100 -> ctx.getString(R.string.ui_scale_default)
+								v < 120 -> ctx.getString(R.string.ui_scale_larger)
+								else -> ctx.getString(R.string.ui_scale_largest)
+							}
+						},
+						onValueChange = { uiScale = it },
+						icon = R.drawable.ic_zoom_in,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.haptic_feedback),
+						subtitle = stringResource(R.string.haptic_feedback_summary),
+						checked = hapticFeedback,
+						onCheckedChange = { hapticFeedback = it },
+						icon = R.drawable.ic_haptic,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.hide_status_bar),
+						subtitle = stringResource(R.string.hide_status_bar_summary),
+						checked = hideStatusBar,
+						onCheckedChange = { hideStatusBar = it },
+						icon = R.drawable.ic_eye_off,
+
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.manga_list)) {
+				item { pos ->
+					PreviewChoiceSettingsItem(
+						title = stringResource(R.string.list_mode),
+						options = listModePreviewOptions(listModeEntries),
+						selectedIndex = listModeValues.indexOf(listMode),
+						onSelected = { listMode = listModeValues[it] },
+						icon = R.drawable.ic_list,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					// Picked as items per row, bigger covers to the right; stored as the matching size.
+					val columns = GridColumns.columnsFor(ctx.resources, gridWidth, gridSize / 100f)
+					SliderSettingsItem(
+						title = stringResource(R.string.grid_size),
+						value = maxGridColumns + 1 - columns,
+						valueFrom = 1,
+						valueTo = maxGridColumns,
+						stepSize = 1,
+						valueLabel = { position ->
+							val count = maxGridColumns + 1 - position
+							ctx.resources.getQuantityString(R.plurals.items_per_row, count, count)
+						},
+						onValueChange = { position ->
+							val count = maxGridColumns + 1 - position
+							if (count != columns) {
+								gridSize = GridColumns.gridSizeFor(ctx.resources, gridWidth, count)
+							}
+						},
+						icon = R.drawable.ic_grid,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_quick_filters),
+						subtitle = stringResource(R.string.show_quick_filters_summary),
+						checked = quickFilter,
+						onCheckedChange = { quickFilter = it },
+						icon = R.drawable.ic_filter_menu,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.list_checkpoint_settings),
+						subtitle = stringResource(R.string.list_checkpoint_settings_summary),
+						checked = listCheckpoint,
+						onCheckedChange = { listCheckpoint = it },
+						icon = R.drawable.ic_jump_back,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.show_reading_indicators),
+						entries = readingIndicatorEntries,
+						entryValues = readingIndicatorValues,
+						selectedValue = readingIndicator,
+						onValueChange = { readingIndicator = it },
+						icon = R.drawable.ic_history,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					MultiSelectSettingsItem(
+						title = stringResource(R.string.badges_in_lists),
+						entries = badgeEntries,
+						entryValues = badgeValues,
+						selectedValues = mangaListBadges,
+						onValuesChange = { mangaListBadges = it },
+						icon = R.drawable.ic_tag,
+						
+						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.details)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.collapse_long_description),
+						checked = descriptionCollapse,
+						onCheckedChange = { descriptionCollapse = it },
+						icon = R.drawable.ic_expand,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_pages_thumbs),
+						subtitle = stringResource(R.string.show_pages_thumbs_summary),
+						checked = pagesTab,
+						onCheckedChange = { pagesTab = it },
+						icon = R.drawable.ic_images,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					ListSettingsItem(
+						title = stringResource(R.string.default_tab),
+						entries = detailsTabEntries,
+						entryValues = detailsTabValues,
+						selectedValue = detailsTab,
+						onValueChange = { detailsTab = it },
+						icon = R.drawable.ic_list_group,
+						
+						shape = pos.shape,
+						enabled = pagesTab,
+					)
+				}
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.details_appearance),
+						subtitle = stringResource(R.string.details_appearance_summary),
+						icon = R.drawable.ic_list_detailed,
+						
+						shape = pos.shape,
+						onClick = onOpenDetailsAppearance,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.main_screen)) {
+				item { pos ->
+					MultiSelectSettingsItem(
+						title = stringResource(R.string.search_suggestions),
+						entries = searchSuggestionEntries,
+						entryValues = searchSuggestionValues,
+						selectedValues = searchSuggestions,
+						onValuesChange = { searchSuggestions = it },
+						icon = R.drawable.ic_suggestion,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					NavigationSettingsItem(
+						title = stringResource(R.string.main_screen_sections),
+						icon = R.drawable.ic_drawer_menu,
+						
+						shape = pos.shape,
+						onClick = onOpenNavConfig,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.main_screen_fab),
+						subtitle = stringResource(R.string.main_screen_fab_summary),
+						checked = mainFab,
+						onCheckedChange = { mainFab = it },
+						icon = R.drawable.ic_read,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.show_labels_in_navbar),
+						checked = navLabels,
+						onCheckedChange = { navLabels = it },
+						icon = R.drawable.ic_title,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.use_legacy_navigation_bar),
+						subtitle = stringResource(R.string.use_legacy_navigation_bar_summary),
+						checked = navLegacy,
+						onCheckedChange = { navLegacy = it },
+						icon = R.drawable.ic_bottom_navigation,
+
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.bar_blur),
+						subtitle = stringResource(R.string.bar_blur_summary),
+						checked = barBlur,
+						onCheckedChange = { barBlur = it },
+						icon = R.drawable.ic_blur,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.pin_navigation_ui),
+						subtitle = stringResource(R.string.pin_navigation_ui_summary),
+						checked = navPinned,
+						onCheckedChange = { navPinned = it },
+						icon = R.drawable.ic_pin,
+						
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.exit_confirmation),
+						subtitle = stringResource(R.string.exit_confirmation_summary),
+						checked = exitConfirm,
+						onCheckedChange = { exitConfirm = it },
+						icon = R.drawable.ic_alert_outline,
+						
+						shape = pos.shape,
+					)
+				}
+				if (dynamicShortcutsAvailable) {
+					item { pos ->
+						SwitchSettingsItem(
+							title = stringResource(R.string.history_shortcuts),
+							subtitle = stringResource(R.string.history_shortcuts_summary),
+							checked = dynamicShortcuts,
+							onCheckedChange = { dynamicShortcuts = it },
+							icon = R.drawable.ic_shortcut,
+							
+							shape = pos.shape,
+						)
+					}
+				}
+			}
+		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
+	}
+}
+
+/** The launcher icons as tiles, in the app's current look, drawn from the launcher's own icon layers. */
+@Composable
+private fun AppIconPicker(
+	selected: String,
+	scheme: ColorScheme,
+	isDark: Boolean,
+	isOled: Boolean,
+	onSelect: (String) -> Unit,
+) {
+	val haptic = rememberHapticEffect()
+	val context = LocalContext.current
+	val labels = listOf(R.string.app_icon_default, R.string.app_icon_themed, R.string.app_icon_mono, R.string.app_icon_static)
+	Row(
+		modifier = Modifier.fillMaxWidth(),
+		horizontalArrangement = Arrangement.spacedBy(8.dp),
+	) {
+		AppIcon.entries.forEach { icon ->
+			if (icon == AppIcon.STATIC) {
+				// Static turns the theming off, so it sits apart from the themed choices.
+				VerticalDivider(modifier = Modifier.padding(top = 8.dp).height(48.dp))
+			}
+			val res = AppIconManager.iconRes(icon, scheme, isDark, isOled)
+			// Both layers edge to edge, so the tile's own rounded shape is the icon's shape.
+			val painter = remember(context, res) {
+				val adaptive = ContextCompat.getDrawable(context, res) as AdaptiveIconDrawable
+				DrawablePainter(LayerDrawable(arrayOf(adaptive.background, adaptive.foreground)))
+			}
+			PreviewTile(
+				label = stringResource(labels[icon.ordinal]),
+				selected = icon.name == selected,
+				enabled = true,
+				onClick = {
+					haptic(HapticEffect.CONFIRM)
+					onSelect(icon.name)
+				},
+				aspectRatio = 1f,
+				modifier = Modifier
+					.weight(1f, fill = false)
+					.widthIn(max = 64.dp),
+			) {
+				Image(
+					painter = painter,
+					contentDescription = null,
+					modifier = Modifier.matchParentSize(),
+				)
+			}
+		}
+	}
+}

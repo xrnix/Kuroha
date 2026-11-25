@@ -1,0 +1,293 @@
+import java.time.LocalDateTime
+
+plugins {
+	id 'com.android.application'
+	id 'kotlin-android'
+	id 'com.google.devtools.ksp'
+	id 'kotlin-parcelize'
+	id 'dagger.hilt.android.plugin'
+	id 'androidx.room'
+	id 'org.jetbrains.kotlin.plugin.serialization'
+	id 'org.jetbrains.kotlin.plugin.compose'
+	// enable if needed
+	// id 'dev.reformator.stacktracedecoroutinator'
+}
+
+// Reads a credential from local.properties, falling back to an environment variable for CI.
+//
+// Properties.load only splits on the first '=', so a base64 token's '=' padding survives untouched
+// and needs no quoting. Quotes would in fact become part of the value, so they are stripped here -
+// along with stray whitespace - to make that paste mistake harmless instead of silently wrong.
+// The key parsers downloaded by the official builds have to be signed with. Its other half is a secret of the
+// parsers repository, PARSERS_SIGNING_KEY.
+def parsersBundlePublicKey = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEA4WroqfxGfT+ObvS1ZrFVeTv3fV5kpS6j2CofE+USn0HsGaHAe0t70RdjBlNhOEDCyF8c/49w4S2IXQYpU5paA=='
+
+def readSecret = { String fileKey, String envKey ->
+	def props = new Properties()
+	def file = rootProject.file('local.properties')
+	if (file.exists()) {
+		file.withInputStream { props.load(it) }
+	}
+	def value = (props.getProperty(fileKey) ?: System.getenv(envKey) ?: '').trim()
+	while (value.length() > 1 && (value.startsWith("'") || value.startsWith('"'))
+		&& value.charAt(0) == value.charAt(value.length() - 1)) {
+		value = value.substring(1, value.length() - 1).trim()
+	}
+	return value
+}
+
+
+android {
+	compileSdk = 37
+	buildToolsVersion = '36.0.0'
+	namespace = 'org.koitharu.kotatsu'
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
+    }
+
+    defaultConfig {
+		applicationId 'kuroha.xrnix.app'
+		minSdk = 26
+		targetSdk = 37
+		versionCode = 2049
+        versionName = '1.0.0'
+		generatedDensities = []
+		ndk {
+			// ARM only. x86 and x86_64 devices - Intel Chromebooks, emulators, BlueStacks - run these
+			// through Android's ARM translation, so the x86 copies of every native library were
+			// megabytes of download nobody needed. A device without that translation cannot install.
+			abiFilters 'armeabi-v7a', 'arm64-v8a'
+		}
+		testInstrumentationRunner 'org.koitharu.kotatsu.HiltTestRunner'
+		ksp {
+			arg('room.generateKotlin', 'true')
+		}
+		androidResources {
+			// https://issuetracker.google.com/issues/408030127
+			generateLocaleConfig false
+		}
+		def localProperties = new Properties()
+		def localPropertiesFile = rootProject.file('local.properties')
+		if (localPropertiesFile.exists()) {
+			localProperties.load(new FileInputStream(localPropertiesFile))
+		}
+		resValue 'string', 'tg_backup_bot_token', localProperties.getProperty('tg_backup_bot_token', '')
+
+		// Host that serves the shareable https manga links and the assetlinks.json that lets Android
+		// verify them. Must match the deployed worker's hostname in web/wrangler.toml exactly, or the
+		// links stop opening the app directly. Used by the manifest and by Manga.appUrl.
+		def appLinkHost = 'kotatsuredo.app'
+		manifestPlaceholders = [appLinkHost: appLinkHost]
+		buildConfigField 'String', 'APP_LINK_HOST', "\"${appLinkHost}\""
+
+		// Where parsers newer than the ones built in are published, and the public half of the key they are signed
+		// with: see docs/BUNDLE.md in the parsers repository. Whoever holds the private half can run code in every
+		// installed copy of this app, so a fork must set both to its own, with `parsers_bundle_url` and
+		// `parsers_bundle_key` in local.properties or PARSERS_BUNDLE_URL and PARSERS_BUNDLE_KEY in the
+		// environment, or set the key to `none` to take no parsers from anywhere.
+		def parsersBundleUrl = readSecret('parsers_bundle_url', 'PARSERS_BUNDLE_URL')
+			?: 'https://github.com/Kotatsu-Redo/kotatsu-parsers-redo/releases/download/parsers-bundle'
+		def parsersBundleKey = readSecret('parsers_bundle_key', 'PARSERS_BUNDLE_KEY') ?: parsersBundlePublicKey
+		if (parsersBundleKey == 'none') {
+			parsersBundleKey = ''
+		}
+		buildConfigField 'String', 'PARSERS_BUNDLE_URL', "\"${parsersBundleUrl}\""
+		buildConfigField 'String', 'PARSERS_BUNDLE_KEY', "\"${parsersBundleKey}\""
+	}
+	buildTypes {
+		debug {
+			applicationIdSuffix = '.debug'
+		}
+		release {
+			minifyEnabled true
+			shrinkResources true
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+		}
+		nightly {
+			initWith release
+			applicationIdSuffix = '.nightly'
+		}
+	}
+	buildFeatures {
+		viewBinding true
+		buildConfig true
+		compose true
+	}
+	packagingOptions {
+		resources {
+			excludes += [
+				'META-INF/README.md',
+				'META-INF/NOTICE.md'
+			]
+		}
+	}
+	sourceSets {
+		androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
+		main.java.srcDirs += 'src/main/kotlin/'
+	}
+	compileOptions {
+		coreLibraryDesugaringEnabled true
+		sourceCompatibility JavaVersion.VERSION_17
+		targetCompatibility JavaVersion.VERSION_17
+	}
+	kotlinOptions {
+		jvmTarget = JavaVersion.VERSION_17.toString()
+		freeCompilerArgs += [
+			'-opt-in=kotlin.ExperimentalStdlibApi',
+			'-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi',
+			'-opt-in=kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi',
+			'-opt-in=kotlinx.coroutines.InternalForInheritanceCoroutinesApi',
+			'-opt-in=kotlinx.coroutines.FlowPreview',
+			'-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi',
+			'-opt-in=androidx.compose.foundation.ExperimentalFoundationApi',
+			'-opt-in=kotlin.contracts.ExperimentalContracts',
+			'-opt-in=coil3.annotation.ExperimentalCoilApi',
+			'-opt-in=coil3.annotation.InternalCoilApi',
+			'-opt-in=kotlinx.serialization.ExperimentalSerializationApi',
+			'-Xjspecify-annotations=strict',
+			'-Xannotation-default-target=first-only',
+			'-Xtype-enhancement-improvements-strict-mode'
+		]
+	}
+	room {
+        schemaDirectory "$projectDir/schemas"
+	}
+	lint {
+		abortOnError true
+		disable 'MissingTranslation', 'PrivateResource', 'SetJavaScriptEnabled', 'SimpleDateFormat'
+	}
+	testOptions {
+		unitTests.includeAndroidResources true
+		unitTests.returnDefaultValues false
+		kotlinOptions {
+			freeCompilerArgs += ['-opt-in=org.koitharu.kotatsu.parsers.InternalParsersApi']
+		}
+	}
+	applicationVariants.configureEach { variant ->
+		if (variant.name == 'nightly') {
+			variant.outputs.each { output ->
+				def now = LocalDateTime.now()
+				output.versionCodeOverride = now.format("yyMMdd").toInteger()
+				output.versionNameOverride = 'N' + now.format("yyyyMMdd")
+			}
+		}
+	}
+}
+
+tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+	enabled = false
+}
+
+dependencies {
+	def parsersVersion = libs.versions.parsers.get()
+	if (System.properties.containsKey('parsersVersionOverride')) {
+		// usage:
+		// -DparsersVersionOverride=$(curl -s https://api.github.com/repos/kotatsuapp/kotatsu-parsers/commits/master -H "Accept: application/vnd.github.sha" | cut -c -10)
+		parsersVersion = System.getProperty('parsersVersionOverride')
+	}
+	//noinspection UseTomlInstead
+	implementation("com.github.clquwu:kotatsu-parsers-redo:$parsersVersion") {
+		exclude group: 'org.json', module: 'json'
+	}
+
+	coreLibraryDesugaring libs.desugar.jdk.libs
+	implementation libs.kotlin.stdlib
+	implementation libs.kotlinx.coroutines.android
+	implementation libs.kotlinx.coroutines.guava
+
+	implementation platform(libs.androidx.compose.bom)
+	implementation libs.androidx.compose.runtime
+	implementation libs.androidx.compose.ui
+	implementation libs.androidx.compose.foundation
+	implementation libs.androidx.compose.material3
+	implementation libs.androidx.compose.activity
+	implementation libs.androidx.graphics.shapes
+	implementation libs.coil.compose
+	implementation libs.play.services.auth
+
+	implementation libs.androidx.appcompat
+	implementation libs.androidx.core
+	implementation libs.androidx.core.splashscreen
+	implementation libs.androidx.activity
+	implementation libs.androidx.fragment
+	implementation libs.androidx.transition
+	implementation libs.androidx.collection
+	implementation libs.lifecycle.viewmodel
+	implementation libs.lifecycle.service
+	implementation libs.lifecycle.process
+	implementation libs.androidx.constraintlayout
+	implementation libs.androidx.documentfile
+	implementation libs.androidx.swiperefreshlayout
+	implementation libs.androidx.recyclerview
+	implementation libs.androidx.viewpager2
+	implementation libs.androidx.preference
+	implementation libs.androidx.biometric
+	implementation libs.material
+	implementation libs.androidx.lifecycle.common.java8
+	implementation libs.androidx.webkit
+
+	implementation libs.androidx.work.runtime
+	implementation libs.guava
+
+    // Foldable/Window layout
+    implementation libs.androidx.window
+
+	implementation libs.androidx.room.runtime
+	implementation libs.androidx.room.ktx
+	ksp libs.androidx.room.compiler
+
+	implementation libs.okhttp
+	implementation libs.okhttp.tls
+	implementation libs.okhttp.dnsoverhttps
+	implementation libs.okio
+	implementation libs.kotlinx.serialization.json
+
+	implementation libs.adapterdelegates
+	implementation libs.adapterdelegates.viewbinding
+
+	implementation libs.hilt.android
+	ksp libs.hilt.compiler
+	implementation libs.androidx.hilt.work
+	ksp libs.androidx.hilt.compiler
+
+	implementation libs.coil.core
+	implementation libs.coil.network
+	implementation libs.coil.gif
+	implementation libs.coil.svg
+	implementation libs.avif.decoder
+	implementation libs.jxl.coder
+	implementation libs.ssiv
+	implementation libs.disk.lru.cache
+	implementation libs.markwon
+	implementation libs.kizzyrpc
+
+	implementation libs.acra.dialog
+
+	implementation libs.conscrypt.android
+	implementation libs.play.services.auth
+
+	debugImplementation libs.leakcanary.android
+	nightlyImplementation libs.leakcanary.android
+	debugImplementation libs.workinspector
+
+	testImplementation libs.junit
+	testImplementation libs.json
+	testImplementation libs.kotlinx.coroutines.test
+
+	androidTestImplementation libs.androidx.runner
+	androidTestImplementation libs.androidx.rules
+	androidTestImplementation libs.androidx.test.core
+	androidTestImplementation libs.androidx.junit
+
+	androidTestImplementation libs.kotlinx.coroutines.test
+
+	androidTestImplementation libs.androidx.room.testing
+	androidTestImplementation libs.moshi.kotlin
+
+	androidTestImplementation libs.hilt.android.testing
+	kspAndroidTest libs.hilt.android.compiler
+}
