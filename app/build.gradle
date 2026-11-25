@@ -98,11 +98,26 @@ android {
 		buildConfigField 'String', 'PARSERS_BUNDLE_URL', "\"${parsersBundleUrl}\""
 		buildConfigField 'String', 'PARSERS_BUNDLE_KEY', "\"${parsersBundleKey}\""
 	}
+	signingConfigs {
+		release {
+			def keystorePath = readSecret('signing_keystore_path', 'KEYSTORE_PATH') ?: 'release.keystore'
+			def keystoreFile = rootProject.file(keystorePath)
+			if (keystoreFile.exists()) {
+				storeFile keystoreFile
+				storePassword readSecret('signing_keystore_password', 'KEYSTORE_PASSWORD') ?: 'kuroha123'
+				keyAlias readSecret('signing_key_alias', 'KEY_ALIAS') ?: 'kuroha'
+				keyPassword readSecret('signing_key_password', 'KEY_PASSWORD') ?: 'kuroha123'
+			} else {
+				initWith(signingConfigs.debug)
+			}
+		}
+	}
 	buildTypes {
 		debug {
 			applicationIdSuffix = '.debug'
 		}
 		release {
+			signingConfig signingConfigs.release
 			minifyEnabled true
 			shrinkResources true
 			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -173,6 +188,10 @@ android {
 				def now = LocalDateTime.now()
 				output.versionCodeOverride = now.format("yyMMdd").toInteger()
 				output.versionNameOverride = 'N' + now.format("yyyyMMdd")
+			}
+		} else if (variant.buildType.name == 'release') {
+			variant.outputs.each { output ->
+				output.outputFileName = "kuroha-v${variant.versionName}.apk"
 			}
 		}
 	}
