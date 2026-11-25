@@ -1058,6 +1058,7 @@
 	</style>
 	<style name="Widget.Kotatsu.ReaderFloatingToolbar" parent="Widget.Material3.FloatingToolbar">
 		<item name="backgroundTint">?attr/colorSurfaceContainer</item>
+		<item name="elevation">6dp</item>
 	</style>
 	<style name="Widget.Kotatsu.ReaderFloatingToolbar.IconButton" parent="Widget.Material3Expressive.Button.IconButton.Standard">
 		<item name="iconTint">@color/reader_toolbar_icon</item>

@@ -140,6 +140,8 @@
 	<dimen name="reader_toolbar_actions_end_inset">20dp</dimen>
 	<dimen name="reader_double_page_center_gap">1dp</dimen>
 	<dimen name="reader_actions_options_margin_end">8dp</dimen>
+	<dimen name="reader_floating_toolbar_max_width">580dp</dimen>
+	<dimen name="reader_timer_control_width_tablet">340dp</dimen>
 	<dimen name="reader_scrub_preview_width">104dp</dimen>
 	<dimen name="reader_scrub_preview_height">144dp</dimen>
 	<dimen name="reader_scrub_preview_offset">4dp</dimen>

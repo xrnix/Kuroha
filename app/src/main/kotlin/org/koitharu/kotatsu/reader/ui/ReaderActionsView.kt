@@ -272,6 +272,7 @@ class ReaderActionsView @JvmOverloads constructor(
 	private fun updateControlsVisibility() {
 		val controls = settings.readerControls
 		val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+		val isTablet = resources.getBoolean(R.bool.is_tablet)
 		binding.buttonPrev.isVisible = ReaderControl.PREV_CHAPTER in controls
 		binding.buttonNext.isVisible = ReaderControl.NEXT_CHAPTER in controls
 		binding.buttonPagesThumbs.isVisible = ReaderControl.PAGES_SHEET in controls
@@ -280,7 +281,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.buttonSave.isVisible = ReaderControl.SAVE_PAGE in controls
 		binding.buttonTimer.isVisible = ReaderControl.TIMER in controls
 		binding.buttonBookmark.isVisible = ReaderControl.BOOKMARK in controls
-		binding.buttonOptions.isVisible = isLandscape
+		binding.buttonOptions.isVisible = isLandscape && !isTablet
 		binding.slider.isVisible = ReaderControl.SLIDER in controls
 		for (control in controls) {
 			bringChildToFront(control.view())

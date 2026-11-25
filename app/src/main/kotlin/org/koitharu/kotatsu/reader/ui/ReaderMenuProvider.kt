@@ -9,11 +9,12 @@ import org.koitharu.kotatsu.R
 class ReaderMenuProvider(
 	private val onOpenMenu: () -> Unit,
 	private val isLandscape: Boolean,
+	private val isTablet: Boolean = false,
 ) : MenuProvider {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 		menuInflater.inflate(R.menu.opt_reader, menu)
-		menu.findItem(R.id.action_reader_menu)?.isVisible = !isLandscape
+		menu.findItem(R.id.action_reader_menu)?.isVisible = !isLandscape || isTablet
 	}
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean {

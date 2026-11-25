@@ -176,7 +176,8 @@ class ReaderActivity :
         viewBinding.timerControl.attach(scrollTimer, this)
         if (resources.getBoolean(R.bool.is_tablet)) {
             viewBinding.timerControl.updateLayoutParams<CoordinatorLayout.LayoutParams> {
-                topMargin = marginEnd + getThemeDimensionPixelOffset(appcompatR.attr.actionBarSize)
+                width = resources.getDimensionPixelSize(R.dimen.reader_timer_control_width_tablet)
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             }
         }
 
@@ -233,6 +234,7 @@ class ReaderActivity :
             ReaderMenuProvider(
                 onOpenMenu = ::openMenu,
                 isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+                isTablet = resources.getBoolean(R.bool.is_tablet),
             ),
         )
 
@@ -455,12 +457,19 @@ class ReaderActivity :
         viewBinding.toolbarDocked?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
             val dockedMargin = resources.getDimensionPixelSize(R.dimen.screen_padding)
             bottomMargin = tappableInsets.bottom + dockedMargin
-            rightMargin = systemBars.right + dockedMargin
-            leftMargin = systemBars.left + dockedMargin
-        } ?: viewBinding.actionsView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-            bottomMargin = tappableInsets.bottom
-            rightMargin = systemBars.right
-            leftMargin = systemBars.left
+            val isTablet = resources.getBoolean(R.bool.is_tablet)
+            if (isTablet) {
+                val maxDockWidth = resources.getDimensionPixelSize(R.dimen.reader_floating_toolbar_max_width)
+                val availableWidth = v.width - systemBars.left - systemBars.right
+                val dockWidth = minOf(maxDockWidth, availableWidth - (dockedMargin * 2))
+                width = dockWidth
+                val sideMargin = (availableWidth - dockWidth) / 2
+                leftMargin = systemBars.left + sideMargin
+                rightMargin = systemBars.right + sideMargin
+            } else {
+                rightMargin = systemBars.right + dockedMargin
+                leftMargin = systemBars.left + dockedMargin
+            }
         }
         viewBinding.toolbarDocked?.let { docked ->
             dockedToolbarHeight = maxOf(dockedToolbarHeight, docked.height)
