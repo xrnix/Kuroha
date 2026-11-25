@@ -129,12 +129,12 @@ enum class SettingsSection(
 		SourcesSettingsFragment::class.java,
 	),
 	READER(
-		R.string.reader_settings, R.drawable.ic_book_page, "reader",
+		R.string.reader_settings, R.drawable.ic_auto_stories, "reader",
 		intArrayOf(R.string.read_mode, R.string.scale_mode, R.string.switch_pages),
 		ReaderSettingsFragment::class.java,
 	),
 	STORAGE(
-		R.string.storage_and_network, R.drawable.ic_usage, "storage",
+		R.string.storage_and_network, R.drawable.ic_storage, "storage",
 		intArrayOf(R.string.storage_usage, R.string.proxy, R.string.prefetch_content),
 		StorageAndNetworkSettingsFragment::class.java,
 	),
@@ -149,7 +149,7 @@ enum class SettingsSection(
 		BackupSettingsFragment::class.java,
 	),
 	TRACKER(
-		R.string.check_for_new_chapters, R.drawable.ic_feed, "tracker",
+		R.string.check_for_new_chapters, R.drawable.ic_notification, "tracker",
 		intArrayOf(R.string.track_sources, R.string.notifications_settings),
 		TrackerSettingsFragment::class.java,
 	),
@@ -159,7 +159,7 @@ enum class SettingsSection(
 		ServicesSettingsFragment::class.java,
 	),
 	PRIVACY(
-		R.string.privacy_and_content, R.drawable.ic_data_privacy, "privacy",
+		R.string.privacy_and_content, R.drawable.ic_shield, "privacy",
 		intArrayOf(R.string.app_security, R.string.adult_content),
 		PrivacySettingsFragment::class.java,
 	),

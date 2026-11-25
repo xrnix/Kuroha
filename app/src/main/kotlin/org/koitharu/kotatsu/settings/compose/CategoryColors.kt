@@ -7,11 +7,8 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Background + foreground tint pair used for the circular icon container on each
- * settings card. Chosen so all categories read at a glance and stay legible against
- * surfaceContainer in both light and dark themes.
- *
- * The palette mirrors PixelPlayer's category-color approach but reuses our existing
- * `ic_*` drawable assets — only the tints differ per category.
+ * settings card. Chosen for high legibility and a cohesive mineral/jewel palette
+ * across light and dark themes.
  */
 @Immutable
 data class CategoryIconColors(
@@ -20,31 +17,31 @@ data class CategoryIconColors(
 )
 
 object CategoryPalette {
-	// Tints expressed as solid hex pairs so they survive dynamic-color themes too.
-	val Appearance = CategoryIconColors(Color(0xFFE9DDFF), Color(0xFF22005D))
-	val Extensions = CategoryIconColors(Color(0xFFFFD8E4), Color(0xFF31111D))
-	val Reader = CategoryIconColors(Color(0xFFD1E4FF), Color(0xFF001D36))
-	val Storage = CategoryIconColors(Color(0xFFB8F4D6), Color(0xFF002111))
-	val Downloads = CategoryIconColors(Color(0xFFFFE0B2), Color(0xFF2E1500))
-	val Backup = CategoryIconColors(Color(0xFFCDE9CB), Color(0xFF002201))
-	val Tracker = CategoryIconColors(Color(0xFFFFDAD6), Color(0xFF410002))
-	val Services = CategoryIconColors(Color(0xFFE0E0FF), Color(0xFF0F1761))
-	val About = CategoryIconColors(Color(0xFFDDE2EB), Color(0xFF1B1B1F))
-	val Sync = CategoryIconColors(Color(0xFF5F6368), Color(0xFFFFFFFF))
-	val Privacy = CategoryIconColors(Color(0xFFFFDBCF), Color(0xFF380D00))
+	// Light-mode mineral/jewel pastel containers with deep ink foregrounds.
+	val Appearance = CategoryIconColors(Color(0xFFE5DEFA), Color(0xFF281B54))
+	val Extensions = CategoryIconColors(Color(0xFFFAD8E2), Color(0xFF471625))
+	val Reader = CategoryIconColors(Color(0xFFCFE6F7), Color(0xFF0A2E47))
+	val Storage = CategoryIconColors(Color(0xFFC2EFE7), Color(0xFF07362F))
+	val Downloads = CategoryIconColors(Color(0xFFFBE2BD), Color(0xFF3E2907))
+	val Backup = CategoryIconColors(Color(0xFFCFEBD0), Color(0xFF103613))
+	val Tracker = CategoryIconColors(Color(0xFFFAD8D6), Color(0xFF4D1516))
+	val Services = CategoryIconColors(Color(0xFFDCE1FA), Color(0xFF182257))
+	val About = CategoryIconColors(Color(0xFFD8E2EA), Color(0xFF1E272E))
+	val Sync = CategoryIconColors(Color(0xFFCCE7F5), Color(0xFF0E3042))
+	val Privacy = CategoryIconColors(Color(0xFFFADCCF), Color(0xFF471D0D))
 
-	// Dark-mode variants — deeper tinted container, lighter foreground.
-	private val AppearanceDark = CategoryIconColors(Color(0xFF4F378B), Color(0xFFE9DDFF))
-	private val ExtensionsDark = CategoryIconColors(Color(0xFF7D5260), Color(0xFFFFD8E4))
-	private val ReaderDark = CategoryIconColors(Color(0xFF00497F), Color(0xFFD1E4FF))
-	private val StorageDark = CategoryIconColors(Color(0xFF005233), Color(0xFFB8F4D6))
-	private val DownloadsDark = CategoryIconColors(Color(0xFF6B4100), Color(0xFFFFE0B2))
-	private val BackupDark = CategoryIconColors(Color(0xFF255A24), Color(0xFFCDE9CB))
-	private val TrackerDark = CategoryIconColors(Color(0xFF93000A), Color(0xFFFFDAD6))
-	private val ServicesDark = CategoryIconColors(Color(0xFF333DB1), Color(0xFFE0E0FF))
-	private val AboutDark = CategoryIconColors(Color(0xFF45464F), Color(0xFFDDE2EB))
-	private val SyncDark = CategoryIconColors(Color(0xFF5F6368), Color(0xFFFFFFFF))
-	private val PrivacyDark = CategoryIconColors(Color(0xFF812800), Color(0xFFFFDBCF))
+	// Dark-mode variants — rich muted jewel containers with crisp pastel foregrounds.
+	private val AppearanceDark = CategoryIconColors(Color(0xFF453B6B), Color(0xFFE5DEFA))
+	private val ExtensionsDark = CategoryIconColors(Color(0xFF6B3848), Color(0xFFFAD8E2))
+	private val ReaderDark = CategoryIconColors(Color(0xFF1F4E6D), Color(0xFFCFE6F7))
+	private val StorageDark = CategoryIconColors(Color(0xFF1A524B), Color(0xFFC2EFE7))
+	private val DownloadsDark = CategoryIconColors(Color(0xFF5F4418), Color(0xFFFBE2BD))
+	private val BackupDark = CategoryIconColors(Color(0xFF2E5332), Color(0xFFCFEBD0))
+	private val TrackerDark = CategoryIconColors(Color(0xFF732B2C), Color(0xFFFAD8D6))
+	private val ServicesDark = CategoryIconColors(Color(0xFF333D79), Color(0xFFDCE1FA))
+	private val AboutDark = CategoryIconColors(Color(0xFF3A434B), Color(0xFFD8E2EA))
+	private val SyncDark = CategoryIconColors(Color(0xFF284B5C), Color(0xFFCCE7F5))
+	private val PrivacyDark = CategoryIconColors(Color(0xFF6A3623), Color(0xFFFADCCF))
 
 	@Composable
 	fun forKey(key: String): CategoryIconColors {
