@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -189,17 +191,18 @@ private fun SourceSettingsScreen(
 					)
 				}
 			}
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		}
 
 		if (!isValidSource) {
 			item {
-				Spacer(Modifier.height(12.dp))
 				SettingsItem(
 					title = stringResource(R.string.unsupported_source),
 					icon = R.drawable.ic_alert_outline,
 					shape = RoundedCornerShape(24.dp),
 				)
 			}
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		}
 
 		val visibleConfigKeys = configKeys.filter {
@@ -207,50 +210,55 @@ private fun SourceSettingsScreen(
 		}
 		if (visibleConfigKeys.isNotEmpty()) {
 			item {
-				SettingsGroup {
+				SettingsGroup(title = stringResource(R.string.connection)) {
 					visibleConfigKeys.forEach { key ->
-						item {
-							ConfigKeyItem(key = key, prefs = prefs)
+						item { pos ->
+							ConfigKeyItem(key = key, prefs = prefs, shape = pos.shape)
 						}
 					}
 				}
 			}
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		}
 
 		if (repository != null) {
 			item {
-				SettingsGroup {
+				SettingsGroup(title = stringResource(R.string.network)) {
 					if (authProvider != null) {
-						item {
+						item { pos ->
 							SettingsItem(
 								title = stringResource(R.string.sign_in),
 								subtitle = username?.let { stringResource(R.string.logged_in_as, it) },
 								icon = R.drawable.ic_user,
+								shape = pos.shape,
 								enabled = isAuthorized != true && !isLoading,
 								onClick = onSignIn,
 							)
 						}
 					}
-					item {
+					item { pos ->
 						SettingsItem(
 							title = stringResource(R.string.clear_cookies),
 							subtitle = stringResource(R.string.clear_source_cookies_summary),
 							icon = R.drawable.ic_data_privacy,
+							shape = pos.shape,
 							onClick = onClearCookies,
 						)
 					}
 					if (browserUrl != null) {
-						item {
+						item { pos ->
 							SettingsItem(
 								title = stringResource(R.string.open_in_browser),
 								subtitle = browserUrl,
 								icon = R.drawable.ic_open_external,
+								shape = pos.shape,
 								onClick = { onOpenBrowser(browserUrl, sourceTitle) },
 							)
 						}
 					}
 				}
 			}
+			item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
 		}
 
 		item {
@@ -258,31 +266,34 @@ private fun SourceSettingsScreen(
 			var noCaptcha by rememberPrefBoolean(prefs, SourceSettings.KEY_NO_CAPTCHA, false)
 			var slowdown by rememberPrefBoolean(prefs, SourceSettings.KEY_SLOWDOWN, false)
 
-			SettingsGroup {
-				item {
+			SettingsGroup(title = stringResource(R.string.advanced)) {
+				item { pos ->
 					SwitchSettingsItem(
 						title = stringResource(R.string.disable_captcha_auto_solve),
 						subtitle = stringResource(R.string.disable_captcha_auto_solve_summary),
 						icon = R.drawable.ic_disable,
+						shape = pos.shape,
 						checked = noAutoCaptcha,
 						onCheckedChange = { noAutoCaptcha = it },
 					)
 				}
-				item {
+				item { pos ->
 					SwitchSettingsItem(
 						title = stringResource(R.string.disable_captcha_notifications),
 						subtitle = stringResource(R.string.disable_captcha_notifications_summary),
 						icon = R.drawable.ic_notification,
+						shape = pos.shape,
 						checked = noCaptcha,
 						onCheckedChange = { noCaptcha = it },
 					)
 				}
 				if (isValidSource) {
-					item {
+					item { pos ->
 						SwitchSettingsItem(
 							title = stringResource(R.string.download_slowdown),
 							subtitle = stringResource(R.string.download_slowdown_summary),
 							icon = R.drawable.ic_timelapse,
+							shape = pos.shape,
 							checked = slowdown,
 							onCheckedChange = { slowdown = it },
 						)
@@ -290,6 +301,7 @@ private fun SourceSettingsScreen(
 				}
 			}
 		}
+		item { Spacer(Modifier.height(24.dp).fillMaxWidth()) }
 	}
 }
 
@@ -297,6 +309,7 @@ private fun SourceSettingsScreen(
 private fun ConfigKeyItem(
 	key: ConfigKey<*>,
 	prefs: SharedPreferences,
+	shape: Shape,
 ) {
 	when (key) {
 		is ConfigKey.Domain -> {
@@ -305,6 +318,8 @@ private fun ConfigKeyItem(
 			SettingsItem(
 				title = stringResource(R.string.domain),
 				subtitle = domain.ifEmpty { stringResource(R.string.default_s, key.defaultValue) },
+				icon = R.drawable.ic_language,
+				shape = shape,
 				onClick = { showDialog = true },
 			)
 			if (showDialog) {
@@ -326,6 +341,8 @@ private fun ConfigKeyItem(
 			SettingsItem(
 				title = stringResource(R.string.user_agent),
 				subtitle = userAgent.ifEmpty { stringResource(R.string.default_s, key.defaultValue) },
+				icon = R.drawable.ic_info_outline,
+				shape = shape,
 				onClick = { showDialog = true },
 			)
 			if (showDialog) {
@@ -349,6 +366,8 @@ private fun ConfigKeyItem(
 			var showSuspicious by rememberPrefBoolean(prefs, key.key, key.defaultValue)
 			SwitchSettingsItem(
 				title = stringResource(R.string.show_suspicious_content),
+				icon = R.drawable.ic_alert_outline,
+				shape = shape,
 				checked = showSuspicious,
 				onCheckedChange = { showSuspicious = it },
 			)
@@ -359,6 +378,8 @@ private fun ConfigKeyItem(
 			SwitchSettingsItem(
 				title = stringResource(R.string.split_by_translations),
 				subtitle = stringResource(R.string.split_by_translations_summary),
+				icon = R.drawable.ic_language,
+				shape = shape,
 				checked = split,
 				onCheckedChange = { split = it },
 			)
@@ -379,6 +400,8 @@ private fun ConfigKeyItem(
 				entryValues = entryValues,
 				selectedValue = selected,
 				onValueChange = { selected = it },
+				icon = R.drawable.ic_sync_alt,
+				shape = shape,
 			)
 		}
 
