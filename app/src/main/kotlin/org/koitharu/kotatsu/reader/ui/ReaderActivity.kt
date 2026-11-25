@@ -63,8 +63,8 @@ import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.widgets.ZoomControl
 import org.koitharu.kotatsu.core.util.IdlingDetector
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
+import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.core.util.ext.hasGlobalPoint
 import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.core.util.ext.observe
@@ -151,7 +151,9 @@ class ReaderActivity :
         readerManager = ReaderManager(supportFragmentManager, viewBinding.container, settings)
         einkFlashView = createEInkFlashView()
         setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
-        applyTranslucentReaderBars()
+        if (viewBinding.textViewReaderTitle != null) {
+            supportActionBar?.setDisplayShowTitleEnabled(false)
+        }
         touchHelper = TapGridDispatcher(viewBinding.root, this)
         scrollTimer = scrollTimerFactory.create(resources, this, this)
         pageSaveHelper = pageSaveHelperFactory.create(this)
@@ -413,14 +415,6 @@ class ReaderActivity :
         }
     }
 
-    private fun applyTranslucentReaderBars() {
-        viewBinding.appbarTop.setBackgroundColor(getThemeColor(com.google.android.material.R.attr.colorSurface, TOP_READER_BAR_ALPHA))
-        viewBinding.toolbar.background = null
-        viewBinding.toolbarDocked?.background = viewBinding.toolbarDocked?.background?.mutate()?.apply {
-            alpha = 0xFF
-        }
-    }
-
     private fun setUiIsVisible(isUiVisible: Boolean) {
         if (viewBinding.appbarTop.isVisible != isUiVisible) {
             if (isAnimationsEnabled) {
@@ -597,10 +591,13 @@ class ReaderActivity :
 
     private fun onUiStateChanged(pair: Pair<ReaderUiState?, ReaderUiState?>) {
         val (previous: ReaderUiState?, uiState: ReaderUiState?) = pair
-        title = uiState?.mangaName ?: getString(R.string.loading_)
+        val titleText = uiState?.mangaName ?: getString(R.string.loading_)
+        title = titleText
+        viewBinding.textViewReaderTitle?.text = titleText
         viewBinding.infoBar.update(uiState)
         if (uiState == null) {
             supportActionBar?.subtitle = null
+            viewBinding.textViewReaderSubtitle?.isVisible = false
             viewBinding.actionsView.setSliderValue(0, 1)
             viewBinding.actionsView.isSliderEnabled = false
             viewBinding.actionsView.isScrubPreviewEnabled = false
@@ -609,10 +606,12 @@ class ReaderActivity :
         viewBinding.actionsView.isScrubPreviewEnabled = uiState.isSliderAvailable() &&
             getPageAt(uiState.currentPage) != null
         val chapterTitle = uiState.getChapterTitle(resources)
-        supportActionBar?.subtitle = when {
+        val subtitleText = when {
             uiState.incognito -> getString(R.string.incognito_mode)
             else -> chapterTitle
         }
+        supportActionBar?.subtitle = subtitleText
+        viewBinding.textViewReaderSubtitle?.textAndVisible = subtitleText
         if (
             settings.isReaderChapterToastEnabled &&
             chapterTitle != previous?.getChapterTitle(resources) &&
@@ -768,7 +767,5 @@ class ReaderActivity :
         private const val ERASE_TUTORIAL_DELAY_MS = 1_200L
 
         private const val PANEL_SLIDE_DURATION = 250L
-
-        private const val TOP_READER_BAR_ALPHA = 0.7f
     }
 }
