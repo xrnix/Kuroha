@@ -3,7 +3,6 @@ package org.koitharu.kotatsu.history.ui.util
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -11,16 +10,18 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import androidx.annotation.AttrRes
-import org.koitharu.kotatsu.R
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.ColorUtils
 import com.google.android.material.color.MaterialColors
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.ProgressIndicatorMode.*
 import org.koitharu.kotatsu.list.domain.ReadingProgress
 import kotlin.math.roundToInt
 
 /**
- * A small frosted "pill" badge that shows the read percentage (e.g. "29%") over a cover.
- * It auto-sizes to its text, so layouts should give it wrap_content bounds.
+ * A Material 3 Expressive circular progress badge that displays the read progress
+ * as a ring border with the number or completion checkmark in the center.
  */
 class ReadingProgressView @JvmOverloads constructor(
 	context: Context,
@@ -28,34 +29,45 @@ class ReadingProgressView @JvmOverloads constructor(
 	@AttrRes defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
-	private val hPadding = dp(10f)
-	private val vPadding = dp(V_PADDING_DP)
-	private val textSizeNormal = sp(TEXT_SIZE_NORMAL_SP)
-	private val textSizeSmall = sp(TEXT_SIZE_SMALL_SP)
+	private var isSmall: Boolean = false
+
+	private val primaryColor = MaterialColors.getColor(
+		this,
+		androidx.appcompat.R.attr.colorPrimary,
+		0xFF25E2B6.toInt(),
+	)
 
 	private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 		color = MaterialColors.getColor(
 			this@ReadingProgressView,
 			com.google.android.material.R.attr.colorSurfaceContainerHigh,
-			0xFF1B2627.toInt(),
+			0xE61A2324.toInt(),
 		)
 		style = Paint.Style.FILL
 	}
-	private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-		color = MaterialColors.getColor(
-			this@ReadingProgressView,
-			androidx.appcompat.R.attr.colorPrimary,
-			0xFF80D4D8.toInt(),
-		)
-		textAlign = Paint.Align.CENTER
-		typeface = Typeface.DEFAULT_BOLD
-		textSize = textSizeNormal
+
+	private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+		color = ColorUtils.setAlphaComponent(primaryColor, 55)
+		style = Paint.Style.STROKE
 	}
+
+	private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+		color = primaryColor
+		style = Paint.Style.STROKE
+		strokeCap = Paint.Cap.ROUND
+	}
+
+	private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+		color = primaryColor
+		textAlign = Paint.Align.CENTER
+		typeface = ResourcesCompat.getFont(context, R.font.google_sans_medium)
+			?: Typeface.create("sans-serif-medium", Typeface.BOLD)
+	}
+
 	private val rectF = RectF()
-	private val percentPattern = context.getString(R.string.percent_string_pattern)
 
 	private val checkIcon = ContextCompat.getDrawable(context, R.drawable.ic_check)?.mutate()?.also {
-		it.setTint(textPaint.color)
+		it.setTint(primaryColor)
 	}
 
 	private var text: String = ""
@@ -71,24 +83,24 @@ class ReadingProgressView @JvmOverloads constructor(
 			val newText = when (value?.mode) {
 				null, NONE -> ""
 				PERCENT_READ -> if (value.percent in 0f..1f) {
-					percentPattern.format(ReadingProgress.percentToString(value.percent))
+					ReadingProgress.percentToString(value.percent)
 				} else {
 					""
 				}
 				PERCENT_LEFT -> if (value.percent in 0f..1f) {
-					percentPattern.format(ReadingProgress.percentToString(value.percentLeft))
+					ReadingProgress.percentToString(value.percentLeft)
 				} else {
 					""
 				}
 				CHAPTERS_READ -> if (value.percent in 0f..1f && value.totalChapters > 0) {
 					val read = (value.percent * value.totalChapters).roundToInt()
-					"${read}/${value.totalChapters}"
+					read.toString()
 				} else {
 					""
 				}
 				CHAPTERS_LEFT -> if (value.percent in 0f..1f && value.totalChapters > 0) {
 					val left = value.totalChapters - (value.percent * value.totalChapters).roundToInt()
-					"${left}/${value.totalChapters}"
+					left.toString()
 				} else {
 					""
 				}
@@ -97,6 +109,16 @@ class ReadingProgressView @JvmOverloads constructor(
 				text = newText
 				requestLayout()
 				invalidate()
+			}
+		}
+
+	val progressFraction: Float
+		get() {
+			val p = progress ?: return 0f
+			return when (p.mode) {
+				NONE -> 0f
+				PERCENT_READ, CHAPTERS_READ -> p.percent.coerceIn(0f, 1f)
+				PERCENT_LEFT, CHAPTERS_LEFT -> p.percentLeft.coerceIn(0f, 1f)
 			}
 		}
 
@@ -114,11 +136,10 @@ class ReadingProgressView @JvmOverloads constructor(
 		progress = value
 	}
 
-	/** Picks a smaller text size for compact (small) grid cells. */
+	/** Picks a smaller circular size for compact (small) grid cells. */
 	fun setSmall(small: Boolean) {
-		val size = if (small) textSizeSmall else textSizeNormal
-		if (textPaint.textSize != size) {
-			textPaint.textSize = size
+		if (isSmall != small) {
+			isSmall = small
 			requestLayout()
 			invalidate()
 		}
@@ -129,16 +150,10 @@ class ReadingProgressView @JvmOverloads constructor(
 			setMeasuredDimension(0, 0)
 			return
 		}
-		val fm = textPaint.fontMetrics
-		val h = (fm.descent - fm.ascent + vPadding * 2f).toInt()
-		val w = if (isCompleted) {
-			h
-		} else {
-			(textPaint.measureText(text) + hPadding * 2f).toInt()
-		}
+		val diameter = dp(if (isSmall) DIAMETER_SMALL_DP else DIAMETER_NORMAL_DP).roundToInt()
 		setMeasuredDimension(
-			resolveSize(w, widthMeasureSpec),
-			resolveSize(h, heightMeasureSpec),
+			resolveSize(diameter, widthMeasureSpec),
+			resolveSize(diameter, heightMeasureSpec),
 		)
 	}
 
@@ -146,19 +161,51 @@ class ReadingProgressView @JvmOverloads constructor(
 		if (text.isEmpty() && !isCompleted) {
 			return
 		}
-		rectF.set(0f, 0f, width.toFloat(), height.toFloat())
-		val radius = height / 2f
-		canvas.drawRoundRect(rectF, radius, radius, bgPaint)
+		val w = width.toFloat()
+		val h = height.toFloat()
+		val size = minOf(w, h)
+		val centerX = w / 2f
+		val centerY = h / 2f
+		val strokeW = dp(if (isSmall) STROKE_SMALL_DP else STROKE_NORMAL_DP)
+		trackPaint.strokeWidth = strokeW
+		progressPaint.strokeWidth = strokeW
+
+		val halfStroke = strokeW / 2f
+		val innerRadius = size / 2f - halfStroke
+
+		// 1. Elevated container background
+		canvas.drawCircle(centerX, centerY, innerRadius, bgPaint)
+
+		// 2. Circular border track ring
+		rectF.set(centerX - innerRadius, centerY - innerRadius, centerX + innerRadius, centerY + innerRadius)
+		canvas.drawOval(rectF, trackPaint)
+
+		// 3. Progress arc along the circular border
+		val fraction = if (isCompleted) 1f else progressFraction
+		val sweepAngle = fraction * 360f
+		if (sweepAngle >= 359.5f) {
+			canvas.drawOval(rectF, progressPaint)
+		} else if (sweepAngle > 0.5f) {
+			canvas.drawArc(rectF, -90f, sweepAngle, false, progressPaint)
+		}
+
+		// 4. Center content: checkmark if completed, number otherwise
 		if (isCompleted && checkIcon != null) {
-			val iconSize = (height * 0.6f).toInt()
-			val left = (width - iconSize) / 2
-			val top = (height - iconSize) / 2
+			val iconSize = (size * 0.52f).roundToInt()
+			val left = (centerX - iconSize / 2f).roundToInt()
+			val top = (centerY - iconSize / 2f).roundToInt()
 			checkIcon.setBounds(left, top, left + iconSize, top + iconSize)
 			checkIcon.draw(canvas)
 		} else {
+			val baseTextSp = if (isSmall) {
+				if (text.length >= 3) 8f else 9.5f
+			} else {
+				if (text.length >= 3) 9f else 11f
+			}
+			textPaint.textSize = sp(baseTextSp)
 			val fm = textPaint.fontMetrics
-			val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
-			canvas.drawText(text, width / 2f, baseline, textPaint)
+			val baseline = centerY - (fm.ascent + fm.descent) / 2f
+			canvas.drawText(text, centerX, baseline, textPaint)
 		}
 	}
 
@@ -172,27 +219,16 @@ class ReadingProgressView @JvmOverloads constructor(
 
 	companion object {
 
-		private const val V_PADDING_DP = 5f
-		private const val TEXT_SIZE_NORMAL_SP = 12.5f
-		private const val TEXT_SIZE_SMALL_SP = 10.5f
+		const val DIAMETER_NORMAL_DP = 26f
+		const val DIAMETER_SMALL_DP = 22f
+		const val STROKE_NORMAL_DP = 2.5f
+		const val STROKE_SMALL_DP = 2.0f
 
-		/** The pill's height regardless of its text, so other cover pills can match it. */
+		/** The chip's diameter regardless of its text, so other cover badges can match it. */
 		fun pillHeight(resources: Resources, small: Boolean): Int {
 			val dm = resources.displayMetrics
-			val paint = Paint().apply {
-				typeface = Typeface.DEFAULT_BOLD
-				textSize = TypedValue.applyDimension(
-					TypedValue.COMPLEX_UNIT_SP,
-					if (small) TEXT_SIZE_SMALL_SP else TEXT_SIZE_NORMAL_SP,
-					dm,
-				)
-			}
-			val fm = paint.fontMetrics
-			val vPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, V_PADDING_DP, dm)
-			return (fm.descent - fm.ascent + vPadding * 2f).toInt()
+			val dpVal = if (small) DIAMETER_SMALL_DP else DIAMETER_NORMAL_DP
+			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpVal, dm).roundToInt()
 		}
-
-		// Translucent dark "frosted" scrim — keeps the white text legible over any cover.
-		private const val SCRIM_COLOR = 0x99000000.toInt()
 	}
 }
