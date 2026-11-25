@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt">
+	<aapt:attr name="android:drawable">
+		<vector android:width="24dp" android:height="24dp" android:viewportWidth="960" android:viewportHeight="960">
+			<group android:name="g" android:pivotX="480" android:pivotY="480">
+				<path
+					android:fillColor="#000000"
+					android:fillType="evenOdd"
+					android:pathData="M160,880Q127,880 103.5,856.5Q80,833 80,800L80,280Q80,263 91.5,251.5Q103,240 120,240Q137,240 148.5,251.5Q160,263 160,280L160,800L680,800Q697,800 708.5,811.5Q720,823 720,840Q720,857 708.5,868.5Q697,880 680,880L160,880ZM280,720Q247,720 223.5,696.5Q200,673 200,640L200,160Q200,127 223.5,103.5Q247,80 280,80L800,80Q833,80 856.5,103.5Q880,127 880,160L880,640Q880,673 856.5,696.5Q833,720 800,720L280,720ZM740,420L640,360L540,420L540,160L740,160L740,420Z" />
+			</group>
+		</vector>
+	</aapt:attr>
+	<target android:name="g">
+		<aapt:attr name="android:animation">
+			<set>
+				<objectAnimator android:propertyName="scaleX" android:valueFrom="0.6" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/overshoot" />
+				<objectAnimator android:propertyName="scaleY" android:valueFrom="0.6" android:valueTo="1" android:duration="@integer/config_defaultAnimTime" android:interpolator="@android:interpolator/overshoot" />
+			</set>
+		</aapt:attr>
+	</target>
+</animated-vector>
