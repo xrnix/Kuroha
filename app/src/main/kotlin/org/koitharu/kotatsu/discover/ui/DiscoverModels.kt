@@ -5,6 +5,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.discover.domain.DiscoverFilter
 import org.koitharu.kotatsu.discover.domain.DiscoverWindow
 import org.koitharu.kotatsu.list.ui.model.ListModel
+import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Manga
 
 /** Recommendations and what is popular are different questions, so each has its own screen to swipe to. */
@@ -18,6 +19,7 @@ data class DiscoverChips(
 	val tab: DiscoverTab,
 	val window: DiscoverWindow,
 	val filter: DiscoverFilter,
+	val types: List<ContentType>,
 	val genres: List<String>,
 )
 

@@ -46,6 +46,7 @@
     <string name="by_rating">Rating</string>
     <string name="sort_order">Sorting order</string>
     <string name="filter">Filter</string>
+    <string name="discover">Discover</string>
     <string name="saved_filters">Saved filters</string>
     <string name="theme">Theme</string>
     <string name="light">Light</string>

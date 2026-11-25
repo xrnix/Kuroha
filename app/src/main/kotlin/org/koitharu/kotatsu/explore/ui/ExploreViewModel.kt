@@ -199,29 +199,23 @@ class ExploreViewModel @Inject constructor(
 
 	private fun createContentFlow() = combine(
 		observeSourcesForDisplay(),
-		getSuggestionFlow(),
 		isGrid,
 		isRandomLoading,
 		isAllSourcesEnabled,
 		activePresetFlow,
-	) { sources, suggestions, grid, randomLoading, allSourcesEnabled, activePreset ->
-		buildList(sources, suggestions, grid, randomLoading, allSourcesEnabled, activePreset)
+	) { sources, grid, randomLoading, allSourcesEnabled, activePreset ->
+		buildList(sources, grid, randomLoading, allSourcesEnabled, activePreset)
 	}.withErrorHandling()
 
 	private suspend fun buildList(
 		sources: List<MangaSourceInfo>,
-		recommendation: List<Manga>,
 		isGrid: Boolean,
 		randomLoading: Boolean,
 		allSourcesEnabled: Boolean,
 		activePreset: SourcePreset?,
 	): List<ListModel> {
-		val result = ArrayList<ListModel>(sources.size + 3)
+		val result = ArrayList<ListModel>(sources.size + 2)
 		result += ExploreButtons(randomLoading, activePreset?.title)
-		if (recommendation.isNotEmpty()) {
-			result += ListHeader(R.string.suggestions, R.string.more, R.id.nav_suggestions)
-			result += RecommendationsItem(recommendation.toRecommendationList())
-		}
 		if (sources.isNotEmpty()) {
 			result += ListHeader(
 				textRes = R.string.remote_sources,

@@ -14,7 +14,6 @@ import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
-import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseFragment
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.util.ext.findCurrentPagerFragment
@@ -23,14 +22,9 @@ import org.koitharu.kotatsu.databinding.FragmentFavouritesContainerBinding
 import org.koitharu.kotatsu.discover.ui.DiscoverFragment
 import org.koitharu.kotatsu.main.ui.MainNavigationDelegate.TabTransition
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
-import org.koitharu.kotatsu.suggestions.ui.SuggestionsFragment
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExploreContainerFragment : BaseFragment<FragmentFavouritesContainerBinding>(), RecyclerViewOwner {
-
-	@Inject
-	lateinit var settings: AppSettings
 
 	var isTabsAttachDeferred = false
 	private var pendingTabsEnter: Runnable? = null
@@ -45,17 +39,15 @@ class ExploreContainerFragment : BaseFragment<FragmentFavouritesContainerBinding
 
 	override fun onViewBindingCreated(binding: FragmentFavouritesContainerBinding, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
-		val includeSuggestions = settings.isSuggestionsEnabled
-		val adapter = ExplorePagerAdapter(this, includeSuggestions)
+		val adapter = ExplorePagerAdapter(this)
 		binding.pager.adapter = adapter
 		binding.pager.offscreenPageLimit = 1
 		binding.pager.recyclerView?.isNestedScrollingEnabled = false
 		TabLayoutMediator(binding.tabs, binding.pager) { tab, position ->
 			tab.text = getString(
 				when (position) {
-					0 -> R.string.explore
-					1 -> R.string.by_source
-					else -> R.string.suggestions
+					0 -> R.string.discover
+					else -> R.string.by_source
 				},
 			)
 		}.attach()
@@ -189,17 +181,13 @@ class ExploreContainerFragment : BaseFragment<FragmentFavouritesContainerBinding
 		}
 	}
 
-	private class ExplorePagerAdapter(
-		fragment: Fragment,
-		private val includeSuggestions: Boolean,
-	) : FragmentStateAdapter(fragment) {
+	private class ExplorePagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
 
-		override fun getItemCount(): Int = if (includeSuggestions) 3 else 2
+		override fun getItemCount(): Int = 2
 
 		override fun createFragment(position: Int): Fragment = when (position) {
 			0 -> DiscoverFragment()
-			1 -> ExploreFragment()
-			else -> SuggestionsFragment()
+			else -> ExploreFragment()
 		}
 	}
 }

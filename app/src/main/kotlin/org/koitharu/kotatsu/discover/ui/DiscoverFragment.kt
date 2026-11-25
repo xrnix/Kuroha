@@ -10,14 +10,51 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.appcompat.widget.PopupMenu
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.MenuProvider
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
-import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
@@ -31,16 +68,18 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.core.ui.BaseFragment
 import org.koitharu.kotatsu.core.ui.BaseListAdapter
+import org.koitharu.kotatsu.core.ui.dialog.DialogCornerAction
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
-import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
 import org.koitharu.kotatsu.core.ui.util.SpanSizeResolver
-import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.ui.widgets.TipView
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.addMenuProvider
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.findActivity
 import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.core.util.progress.IntPercentLabelFormatter
@@ -59,25 +98,21 @@ import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.list.ui.size.DynamicItemSizeResolver
 import org.koitharu.kotatsu.list.ui.size.StaticItemSizeResolver
+import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.settings.compose.KurohaTheme
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
-private val TYPES = listOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA)
 private const val MAX_POOLED_COVERS = 24
 
-/**
- * The Explore tab: what to read next, whichever source it happens to be on. Two screens to swipe between, and
- * one row of tags above them that says which one this is and narrows down both.
- */
 @AndroidEntryPoint
 class DiscoverFragment :
 	BaseFragment<FragmentDiscoverBinding>(),
 	RecyclerViewOwner,
 	ListStateHolderListener,
 	OnListItemClickListener<MangaListModel>,
-	ChipsView.OnChipClickListener,
 	TipView.OnButtonClickListener {
 
 	@Inject
@@ -85,8 +120,6 @@ class DiscoverFragment :
 
 	private val viewModel by viewModels<DiscoverViewModel>()
 	private var pages: List<RecyclerView> = emptyList()
-
-	/** One for each page, to give them all a new width when the size of the grid is changed. */
 	private val columnResolvers = ArrayList<SpanSizeResolver>(DiscoverTab.entries.size)
 
 	override val recyclerView: RecyclerView?
@@ -106,13 +139,36 @@ class DiscoverFragment :
 				object : ViewPager2.OnPageChangeCallback() {
 					override fun onPageSelected(position: Int) {
 						viewModel.setTab(DiscoverTab.entries[position])
-						viewBinding?.scrollChips?.smoothScrollTo(0, 0)
 					}
 				},
 			)
 		}
-		binding.chips.onChipClickListener = this
-		viewModel.chips.observe(viewLifecycleOwner, ::showChips)
+		binding.filterBar.apply {
+			setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+			setContent {
+				KurohaTheme {
+					val state by viewModel.chips.collectAsState(
+						initial = DiscoverChips(
+							tab = viewModel.tab.value,
+							window = viewModel.window.value,
+							filter = org.koitharu.kotatsu.discover.domain.DiscoverFilter(),
+							types = emptyList(),
+							genres = emptyList(),
+						),
+					)
+					DiscoverFilterBar(
+						state = state,
+						onSelectTab = { tab ->
+							viewBinding?.pager?.setCurrentItem(tab.ordinal, true)
+						},
+						onSelectWindow = viewModel::setWindow,
+						onToggleType = viewModel::toggleType,
+						onToggleGenre = viewModel::toggleGenre,
+						onClearFilters = viewModel::clearFilters,
+					)
+				}
+			}
+		}
 		settings.observeAsFlow(AppSettings.KEY_GRID_SIZE_DISCOVER) { gridSizeDiscover }.observe(viewLifecycleOwner) {
 			val width = getColumnWidth()
 			columnResolvers.forEach { it.minItemWidth = width }
@@ -131,7 +187,6 @@ class DiscoverFragment :
 		val bars = insets.systemBarsInsets
 		val padding = v.resources.getDimensionPixelOffset(R.dimen.list_spacing_normal)
 		pages.forEach { it.setPadding(bars.left + padding, padding, bars.right + padding, bars.bottom + padding) }
-		viewBinding?.scrollChips?.updatePadding(left = bars.left + padding, right = bars.right + padding)
 		return insets.consumeAllSystemBarsInsets()
 	}
 
@@ -140,9 +195,7 @@ class DiscoverFragment :
 		viewModel.onScreenResumed()
 	}
 
-	override fun onItemClick(item: MangaListModel, view: View) {
-		router.openDetails(item.toMangaWithOverride())
-	}
+	override fun onItemClick(item: MangaListModel, view: View) = router.openDetails(item.manga)
 
 	override fun onItemLongClick(item: MangaListModel, view: View): Boolean {
 		offerDismiss(item.manga, view)
@@ -158,7 +211,6 @@ class DiscoverFragment :
 		popup.show()
 	}
 
-	// Shared by the long-press popup and the button on each cover
 	private fun dismissWithUndo(manga: Manga) {
 		val key = viewModel.dismiss(manga)
 		val host = viewBinding?.root ?: return
@@ -168,15 +220,6 @@ class DiscoverFragment :
 		snackbar.show()
 	}
 
-	override fun onChipClick(chip: Chip, data: Any?) {
-		when (data) {
-			is DiscoverTab -> viewBinding?.pager?.setCurrentItem(data.ordinal, true)
-			is DiscoverWindow -> viewModel.setWindow(data)
-			is ContentType -> viewModel.toggleType(data)
-			is String -> viewModel.toggleGenre(data)
-		}
-	}
-
 	override fun onPrimaryButtonClick(tipView: TipView) = viewModel.closeTip()
 
 	override fun onSecondaryButtonClick(tipView: TipView) = Unit
@@ -184,18 +227,6 @@ class DiscoverFragment :
 	override fun onRetryClick(error: Throwable) = viewModel.refresh()
 
 	override fun onEmptyActionClick() = router.openManageSources()
-
-	private fun showChips(state: DiscoverChips) {
-		val chips = buildList {
-			DiscoverTab.entries.mapTo(this) { ChipsView.ChipModel(titleResId = it.titleRes, isChecked = it == state.tab, data = it) }
-			if (state.tab == DiscoverTab.TOP) {
-				DiscoverWindow.entries.mapTo(this) { ChipsView.ChipModel(titleResId = it.titleRes, isChecked = it == state.window, data = it) }
-			}
-			TYPES.mapTo(this) { ChipsView.ChipModel(titleResId = it.titleResId, isChecked = it == state.filter.type, data = it) }
-			state.genres.mapTo(this) { ChipsView.ChipModel(title = it, isChecked = it == state.filter.genre, data = it) }
-		}
-		viewBinding?.chips?.setChips(chips)
-	}
 
 	private fun createPage(tab: DiscoverTab): RecyclerView {
 		val rowSize = StaticItemSizeResolver(resources.getDimensionPixelSize(R.dimen.smaller_grid_width))
@@ -243,15 +274,10 @@ class DiscoverFragment :
 		return page
 	}
 
-	/** As narrow as a column of covers may get: as many are shown as fit at that. */
 	private fun getColumnWidth(): Int {
 		return (resources.getDimension(R.dimen.preferred_grid_width) * settings.gridSizeDiscover / 100f).roundToInt()
 	}
 
-	/**
-	 * Its own size, and not the library's: there was no way to change it at all, and five small covers across was
-	 * what a phone set to show more on screen got. Changed as the slider moves, so the choice shows behind it.
-	 */
 	private fun showGridSizeDialog() {
 		val context = requireContext()
 		val slider = Slider(context).apply {
@@ -280,7 +306,6 @@ class DiscoverFragment :
 			.show()
 	}
 
-	/** Hands the pager views that already exist: each keeps its own list, and they stay alive side by side. */
 	private class PagesAdapter(private val pages: List<View>) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
 		override fun getItemCount() = pages.size
@@ -310,17 +335,322 @@ class DiscoverFragment :
 				true
 			}
 
-			R.id.action_refresh -> {
-				viewModel.refresh()
-				true
-			}
-
-			R.id.action_show_dismissed -> {
-				viewModel.clearDismissed()
-				true
-			}
-
 			else -> false
 		}
+	}
+}
+
+@Composable
+private fun DiscoverFilterBar(
+	state: DiscoverChips,
+	onSelectTab: (DiscoverTab) -> Unit,
+	onSelectWindow: (DiscoverWindow) -> Unit,
+	onToggleType: (ContentType) -> Unit,
+	onToggleGenre: (String) -> Unit,
+	onClearFilters: () -> Unit,
+) {
+	val cs = MaterialTheme.colorScheme
+	val haptic = rememberHapticEffect()
+	var showFilterDialog by remember { mutableStateOf(false) }
+
+	val activeParts = buildList {
+		state.filter.type?.let { add(stringResource(it.titleResId)) }
+		state.filter.genre?.let { add(it) }
+		if (state.tab == DiscoverTab.TOP && state.window != DiscoverWindow.WEEK) {
+			add(stringResource(state.window.titleRes))
+		}
+	}
+	val hasActiveFilters = state.filter.type != null || state.filter.genre != null
+	val filterLabel = if (activeParts.isEmpty()) {
+		stringResource(R.string.filter)
+	} else {
+		activeParts.joinToString(" · ")
+	}
+
+	Row(
+		modifier = Modifier
+			.fillMaxWidth()
+			.padding(horizontal = 16.dp, vertical = 8.dp),
+		horizontalArrangement = Arrangement.SpaceBetween,
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		// Left: sleek segmented pill switcher (For you | Top)
+		Surface(
+			shape = CircleShape,
+			color = cs.surfaceContainerHigh,
+			border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.5f)),
+		) {
+			Row(
+				modifier = Modifier.padding(3.dp),
+				horizontalArrangement = Arrangement.spacedBy(2.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				DiscoverTab.entries.forEach { tab ->
+					val selected = tab == state.tab
+					val bg by animateColorAsState(
+						targetValue = if (selected) cs.primaryContainer else cs.surfaceContainerHigh,
+						label = "tabSegBg",
+					)
+					val fg by animateColorAsState(
+						targetValue = if (selected) cs.onPrimaryContainer else cs.onSurfaceVariant,
+						label = "tabSegFg",
+					)
+					Box(
+						modifier = Modifier
+							.clip(CircleShape)
+							.background(bg)
+							.clickable {
+								haptic(HapticEffect.CONFIRM)
+								onSelectTab(tab)
+							}
+							.padding(horizontal = 14.dp, vertical = 7.dp),
+						contentAlignment = Alignment.Center,
+					) {
+						Text(
+							text = stringResource(tab.titleRes),
+							style = MaterialTheme.typography.labelLarge,
+							fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+							color = fg,
+							maxLines = 1,
+						)
+					}
+				}
+			}
+		}
+
+		Spacer(Modifier.width(8.dp))
+
+		// Right: compact M3 Filter pill button (+ quick clear when active)
+		Row(
+			horizontalArrangement = Arrangement.spacedBy(6.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Surface(
+				shape = CircleShape,
+				color = if (hasActiveFilters) cs.primaryContainer else cs.surfaceContainerHigh,
+				contentColor = if (hasActiveFilters) cs.onPrimaryContainer else cs.onSurface,
+				border = BorderStroke(
+					1.dp,
+					if (hasActiveFilters) cs.primary.copy(alpha = 0.4f) else cs.outlineVariant.copy(alpha = 0.5f),
+				),
+				modifier = Modifier
+					.clip(CircleShape)
+					.clickable {
+						haptic(HapticEffect.CONFIRM)
+						showFilterDialog = true
+					},
+			) {
+				Row(
+					modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+					verticalAlignment = Alignment.CenterVertically,
+					horizontalArrangement = Arrangement.spacedBy(6.dp),
+				) {
+					Icon(
+						painter = painterResource(R.drawable.ic_filter_menu),
+						contentDescription = null,
+						modifier = Modifier.size(18.dp),
+					)
+					Text(
+						text = filterLabel,
+						style = MaterialTheme.typography.labelLarge,
+						fontWeight = if (hasActiveFilters) FontWeight.Bold else FontWeight.Medium,
+						maxLines = 1,
+						overflow = TextOverflow.Ellipsis,
+					)
+				}
+			}
+
+			if (hasActiveFilters) {
+				Surface(
+					shape = CircleShape,
+					color = cs.surfaceContainerHighest,
+					contentColor = cs.onSurfaceVariant,
+					modifier = Modifier
+						.size(34.dp)
+						.clip(CircleShape)
+						.clickable {
+							haptic(HapticEffect.CONFIRM)
+							onClearFilters()
+						},
+				) {
+					Box(contentAlignment = Alignment.Center) {
+						Icon(
+							painter = painterResource(R.drawable.ic_close),
+							contentDescription = stringResource(R.string.reset),
+							modifier = Modifier.size(16.dp),
+						)
+					}
+				}
+			}
+		}
+	}
+
+	if (showFilterDialog) {
+		DiscoverFilterDialog(
+			state = state,
+			onSelectWindow = onSelectWindow,
+			onToggleType = onToggleType,
+			onToggleGenre = onToggleGenre,
+			onReset = onClearFilters,
+			onDismiss = { showFilterDialog = false },
+		)
+	}
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DiscoverFilterDialog(
+	state: DiscoverChips,
+	onSelectWindow: (DiscoverWindow) -> Unit,
+	onToggleType: (ContentType) -> Unit,
+	onToggleGenre: (String) -> Unit,
+	onReset: () -> Unit,
+	onDismiss: () -> Unit,
+) {
+	val cs = MaterialTheme.colorScheme
+	val haptic = rememberHapticEffect()
+
+	Dialog(
+		onDismissRequest = onDismiss,
+		properties = DialogProperties(usePlatformDefaultWidth = false),
+	) {
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_filter_menu),
+			title = stringResource(R.string.filter),
+			cornerAction = DialogCornerAction(
+				icon = painterResource(R.drawable.ic_check),
+				label = stringResource(R.string.done),
+				onClick = onDismiss,
+			),
+			headerTrailing = if (state.filter.type != null || state.filter.genre != null) {
+				{
+					Surface(
+						shape = CircleShape,
+						color = cs.surfaceContainerHighest,
+						modifier = Modifier
+							.clip(CircleShape)
+							.clickable {
+								haptic(HapticEffect.CONFIRM)
+								onReset()
+							},
+					) {
+						Text(
+							text = stringResource(R.string.reset),
+							style = MaterialTheme.typography.labelMedium,
+							fontWeight = FontWeight.Medium,
+							color = cs.primary,
+							modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+						)
+					}
+				}
+			} else {
+				null
+			},
+		) {
+			if (state.tab == DiscoverTab.TOP) {
+				Text(
+					text = stringResource(R.string.top_charts),
+					style = MaterialTheme.typography.labelLarge,
+					fontWeight = FontWeight.SemiBold,
+					color = cs.primary,
+				)
+				Spacer(Modifier.height(8.dp))
+				FlowRow(
+					horizontalArrangement = Arrangement.spacedBy(8.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp),
+				) {
+					DiscoverWindow.entries.forEach { w ->
+						FilterPill(
+							label = stringResource(w.titleRes),
+							selected = w == state.window,
+							onClick = {
+								haptic(HapticEffect.CONFIRM)
+								onSelectWindow(w)
+							},
+						)
+					}
+				}
+				Spacer(Modifier.height(16.dp))
+			}
+
+			if (state.types.isNotEmpty()) {
+				Text(
+					text = stringResource(R.string.categories),
+					style = MaterialTheme.typography.labelLarge,
+					fontWeight = FontWeight.SemiBold,
+					color = cs.primary,
+				)
+				Spacer(Modifier.height(8.dp))
+				FlowRow(
+					horizontalArrangement = Arrangement.spacedBy(8.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp),
+				) {
+					state.types.forEach { type ->
+						FilterPill(
+							label = stringResource(type.titleResId),
+							selected = type == state.filter.type,
+							onClick = {
+								haptic(HapticEffect.CONFIRM)
+								onToggleType(type)
+							},
+						)
+					}
+				}
+			}
+
+			if (state.genres.isNotEmpty()) {
+				Spacer(Modifier.height(16.dp))
+				Text(
+					text = stringResource(R.string.genres),
+					style = MaterialTheme.typography.labelLarge,
+					fontWeight = FontWeight.SemiBold,
+					color = cs.primary,
+				)
+				Spacer(Modifier.height(8.dp))
+				FlowRow(
+					horizontalArrangement = Arrangement.spacedBy(8.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp),
+				) {
+					state.genres.forEach { genre ->
+						FilterPill(
+							label = genre,
+							selected = genre == state.filter.genre,
+							onClick = {
+								haptic(HapticEffect.CONFIRM)
+								onToggleGenre(genre)
+							},
+						)
+					}
+				}
+			}
+		}
+	}
+}
+
+@Composable
+private fun FilterPill(
+	label: String,
+	selected: Boolean,
+	onClick: () -> Unit,
+) {
+	val cs = MaterialTheme.colorScheme
+	Surface(
+		shape = RoundedCornerShape(14.dp),
+		color = if (selected) cs.primaryContainer else cs.surfaceContainerHigh,
+		contentColor = if (selected) cs.onPrimaryContainer else cs.onSurface,
+		border = BorderStroke(
+			1.dp,
+			if (selected) cs.primary.copy(alpha = 0.45f) else cs.outlineVariant.copy(alpha = 0.45f),
+		),
+		modifier = Modifier
+			.clip(RoundedCornerShape(14.dp))
+			.clickable(onClick = onClick),
+	) {
+		Text(
+			text = label,
+			style = MaterialTheme.typography.labelLarge,
+			fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+			modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+		)
 	}
 }

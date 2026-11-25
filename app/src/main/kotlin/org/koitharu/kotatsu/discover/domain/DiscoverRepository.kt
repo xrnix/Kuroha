@@ -86,13 +86,75 @@ class DiscoverRepository @Inject constructor(
 
 	suspend fun hasSources(): Boolean = sourcesRepository.getEnabledSources().isNotEmpty()
 
-	/** What the reader reads most first, then the genres everyone looks for. */
+	/** Only content types actually served by at least one enabled non-NSFW source. */
+	suspend fun getAvailableTypes(): List<ContentType> {
+		val enabled = allEnabledChartSources()
+		if (enabled.isEmpty()) {
+			return emptyList()
+		}
+		val supported = HashSet<ContentType>()
+		for (source in enabled) {
+			(source as? ParserMangaSource)?.contentType?.let { supported += it }
+		}
+		// Mixed-content sources (like MangaDex) expose additional types in filter options
+		coroutineScope {
+			enabled.take(MAX_SOURCES).map { source ->
+				launch {
+					val options = runCatchingCancellable {
+						withTimeoutOrNull(FILTER_OPTIONS_TIMEOUT_MS) {
+							repositoryFactory.create(source).getFilterOptions()
+						}
+					}.getOrNull() ?: return@launch
+					synchronized(supported) {
+						supported += options.availableContentTypes
+					}
+				}
+			}.joinAll()
+		}
+		return DISPLAY_TYPES.filter { it in supported }
+	}
+
+	/** What the reader reads most first, then common genres actually supported by enabled sources or charts. */
 	suspend fun getGenres(): List<String> {
 		val own = runCatchingCancellable { profiles.get().taste }.getOrDefault(emptyMap())
 			.entries.sortedByDescending { it.value }
 			.take(MAX_OWN_GENRES)
 			.map { (tag, _) -> DiscoverRanking.genreTitle(tag) }
-		return (own + COMMON_GENRES).distinctBy { DiscoverRanking.titleKey(it) }
+		val candidates = (own + COMMON_GENRES).distinctBy { DiscoverRanking.titleKey(it) }
+		val enabled = chartSources()
+		if (enabled.isEmpty()) {
+			return emptyList()
+		}
+		val sourceTags = HashSet<MangaTag>()
+		val chartGenreKeys = HashSet<String>()
+		coroutineScope {
+			launch {
+				chartWorks(DiscoverWindow.WEEK).forEach { work ->
+					work.genres.forEach { g ->
+						chartGenreKeys += DiscoverRanking.canonicalTag(g) ?: DiscoverRanking.titleKey(g)
+					}
+				}
+			}
+			enabled.map { source ->
+				launch {
+					val options = runCatchingCancellable {
+						withTimeoutOrNull(FILTER_OPTIONS_TIMEOUT_MS) {
+							repositoryFactory.create(source).getFilterOptions()
+						}
+					}.getOrNull() ?: return@launch
+					synchronized(sourceTags) {
+						sourceTags += options.availableTags
+					}
+				}
+			}.joinAll()
+		}
+		if (sourceTags.isEmpty() && chartGenreKeys.isEmpty()) {
+			return candidates
+		}
+		return candidates.filter { genre ->
+			val key = DiscoverRanking.canonicalTag(genre) ?: DiscoverRanking.titleKey(genre)
+			key in chartGenreKeys || DiscoverRanking.findTag(sourceTags, genre, TAG_MATCH_THRESHOLD) != null
+		}
 	}
 
 	/** What the reader keeps coming back to: last time's answer at once if there is one, then the current one. */
@@ -209,7 +271,7 @@ class DiscoverRepository @Inject constructor(
 			coroutineScope {
 				val chart = async { chartWorks(window).filter { DiscoverRanking.fits(it, filter) } }
 				val semaphore = Semaphore(MAX_PARALLELISM)
-				chartSources().map { source ->
+				chartSources(filter).map { source ->
 					launch {
 						semaphore.withPermit {
 							fetchSourceChart(source, window, filter)?.let { sourceChart ->
@@ -252,7 +314,7 @@ class DiscoverRepository @Inject constructor(
 			val mutex = Mutex()
 			coroutineScope {
 				val semaphore = Semaphore(MAX_PARALLELISM)
-				for (source in chartSources()) {
+				for (source in chartSources(filter)) {
 					launch {
 						semaphore.withPermit {
 							val list = fetchNewest(source, filter) ?: return@withPermit
@@ -428,7 +490,9 @@ class DiscoverRepository @Inject constructor(
 	}
 
 	private suspend fun fetchNewest(source: MangaSource, filter: DiscoverFilter): List<Manga>? = fetchFrom(source) { repository ->
-		val order = DiscoverRanking.newestOrder(repository.sortOrders) ?: return@fetchFrom null
+		val order = DiscoverRanking.newestOrder(repository.sortOrders)
+			?: (if (filter != DiscoverFilter()) DiscoverRanking.orderFor(DiscoverWindow.WEEK, repository.sortOrders)?.order else null)
+			?: return@fetchFrom null
 		repository.getFiltered(source, order, filter)?.take(MAX_PER_SOURCE)
 	}
 
@@ -533,15 +597,31 @@ class DiscoverRepository @Inject constructor(
 		return own == type
 	}
 
-	/** The sources the reader actually reads on first: what is there is what they would open anyway. */
-	private suspend fun chartSources(): List<MangaSource> = sourcesLock.withLock {
+	/** All enabled non-NSFW sources, ordered by reading history first. */
+	private suspend fun allEnabledChartSources(): List<MangaSource> = sourcesLock.withLock {
 		sources?.takeIf { it.isYoungerThan(SOURCES_MAX_AGE_MS) }?.value?.let { return it }
 		val enabled = sourcesRepository.getEnabledSources().filterNot { it.isNsfw() }
 		val used = runCatchingCancellable { history.getPopularSources(MAX_SOURCES) }.getOrDefault(emptyList())
 		// By name: enabled sources come wrapped with their settings, so they never equal the plain ones from history
 		val enabledByName = enabled.associateBy { it.name }
-		(used.mapNotNull { enabledByName[it.name] } + enabled).distinctBy { it.name }.take(MAX_SOURCES)
+		(used.mapNotNull { enabledByName[it.name] } + enabled).distinctBy { it.name }
 			.also { sources = if (it.isEmpty()) null else Timed(it) }
+	}
+
+	/**
+	 * The sources to query for a chart. When a [filter] type is active, sources dedicated to that type
+	 * come first so they are never crowded out by the [MAX_SOURCES] cap.
+	 */
+	private suspend fun chartSources(filter: DiscoverFilter = DiscoverFilter()): List<MangaSource> {
+		val all = allEnabledChartSources()
+		val type = filter.type ?: return all.take(MAX_SOURCES)
+		return all.sortedBy { source ->
+			when ((source as? ParserMangaSource)?.contentType) {
+				type -> 0
+				ContentType.MANGA -> 1
+				else -> 2
+			}
+		}.take(MAX_SOURCES)
 	}
 
 	/**
@@ -589,6 +669,9 @@ class DiscoverRepository @Inject constructor(
 
 		/** Long enough for a site that is merely slow. A blocked one would otherwise hold up the finished list. */
 		const val SOURCE_TIMEOUT_MS = 8_000L
+		const val FILTER_OPTIONS_TIMEOUT_MS = 3_000L
+
+		val DISPLAY_TYPES = listOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS)
 
 		/** Each is a different website, so this burdens none of them, and the first answers show up sooner. */
 		const val MAX_PARALLELISM = 6

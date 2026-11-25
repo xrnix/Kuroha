@@ -159,7 +159,12 @@ class DiscoverViewModel @Inject constructor(
 		}
 		.shared()
 
-	private val genres: Flow<List<String>> = refreshes
+	private val types: Flow<List<ContentType>> = combine(refreshes, returns, ::Pair)
+		.flatMapLatest { flow { emit(repository.getAvailableTypes()) } }
+		.onStart { emit(emptyList()) }
+		.shared()
+
+	private val genres: Flow<List<String>> = combine(refreshes, returns, ::Pair)
 		.flatMapLatest { flow { emit(repository.getGenres()) } }
 		.onStart { emit(emptyList()) }
 		.shared()
@@ -174,11 +179,18 @@ class DiscoverViewModel @Inject constructor(
 		}
 		.shared()
 
-	val chips = combine(tab, window, filter, genres) { tab, window, filter, genres ->
-		// A genre still in force has to stay there to be tapped off, wherever the list has moved on to
-		val picked = filter.genre?.takeUnless { it in genres }
-		DiscoverChips(tab, window, filter, if (picked != null) genres + picked else genres)
-	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), DiscoverChips(tab.value, window.value, filter.value, emptyList()))
+	val chips = combine(tab, window, filter, types, genres) { tab, window, filter, types, genres ->
+		// A genre or type still in force has to stay there to be tapped off, wherever the list has moved on to
+		val pickedType = filter.type?.takeUnless { it in types }
+		val pickedGenre = filter.genre?.takeUnless { it in genres }
+		DiscoverChips(
+			tab = tab,
+			window = window,
+			filter = filter,
+			types = if (pickedType != null) types + pickedType else types,
+			genres = if (pickedGenre != null) genres + pickedGenre else genres,
+		)
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), DiscoverChips(tab.value, window.value, filter.value, emptyList(), emptyList()))
 
 	val forYouContent = combine(
 		combine(filter, hasSources, dismissed, profile, isTipOpen, ::ForYouSetting),
@@ -218,6 +230,10 @@ class DiscoverViewModel @Inject constructor(
 
 	fun setWindow(value: DiscoverWindow) {
 		window.value = value
+	}
+
+	fun clearFilters() {
+		filter.value = DiscoverFilter()
 	}
 
 	fun onScreenResumed() {
@@ -296,7 +312,7 @@ class DiscoverViewModel @Inject constructor(
 					title = R.string.for_you,
 					items = recommended.toModels(),
 					isLoading = false,
-					opensSuggestions = forYou.isNotEmpty(),
+					opensSuggestions = false,
 				),
 			)
 		}

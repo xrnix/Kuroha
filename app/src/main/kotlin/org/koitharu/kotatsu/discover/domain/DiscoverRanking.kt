@@ -549,16 +549,20 @@ object DiscoverRanking {
 		if (type == null || sourceType == type) {
 			return true
 		}
-		val name = type.name.lowercase()
-		return manga.tags.any { it.title.trim().lowercase() == name }
+		val aliases = when (type) {
+			ContentType.MANHWA -> setOf("manhwa", "webtoon", "webtoons")
+			ContentType.COMICS -> setOf("comic", "comics")
+			else -> setOf(type.name.lowercase())
+		}
+		return manga.tags.any { it.title.trim().lowercase() in aliases }
 	}
 
-	/** Whether a manga carries a genre. Sources disagree on spelling, so this goes by the letters only. */
+	/** Whether a manga carries a genre. Sources disagree on spelling, so this normalizes aliases and letters. */
 	fun matchesGenre(manga: Manga, genre: String?): Boolean {
 		if (genre == null) {
 			return true
 		}
-		val key = titleKey(genre)
-		return manga.tags.any { titleKey(it.title) == key }
+		val wanted = canonicalTag(genre) ?: titleKey(genre)
+		return manga.tags.any { (canonicalTag(it.title) ?: titleKey(it.title)) == wanted }
 	}
 }
