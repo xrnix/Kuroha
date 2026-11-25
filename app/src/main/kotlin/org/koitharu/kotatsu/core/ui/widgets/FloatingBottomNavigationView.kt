@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.IdRes
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.main.ui.nav.FloatingNavBar
 import org.koitharu.kotatsu.main.ui.nav.FloatingNavBarColors
@@ -53,7 +55,7 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 	private val legacyElevation = elevation
 	// The legacy bar's items sit too close to its top edge. Nudging them down with translationY
 	// (rather than padding) keeps the bar and the items themselves exactly the same size.
-	private val legacyItemOffset = LEGACY_ITEM_OFFSET_DP * resources.displayMetrics.density
+	private val legacyItemOffset = 0f
 	private var useLegacyNavigation = false
 
 	val isFloating: Boolean
@@ -221,6 +223,11 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 		}
 		background = if (useLegacyNavigation) legacyBackground else null
 		elevation = if (useLegacyNavigation) legacyElevation else 0f
+		if (useLegacyNavigation) {
+			itemIconTintList = ContextCompat.getColorStateList(context, R.color.bottom_menu_active_item)
+			itemTextColor = ContextCompat.getColorStateList(context, R.color.bottom_menu_active_text)
+			itemActiveIndicatorColor = ContextCompat.getColorStateList(context, R.color.bottom_menu_active_indicator)
+		}
 	}
 
 	private fun readNavColors(): FloatingNavBarColors {

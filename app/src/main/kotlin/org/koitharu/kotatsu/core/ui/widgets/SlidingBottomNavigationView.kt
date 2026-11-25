@@ -38,7 +38,7 @@ open class SlidingBottomNavigationView @JvmOverloads constructor(
 	context: Context,
 	attrs: AttributeSet? = null,
 	@AttrRes defStyleAttr: Int = materialR.attr.bottomNavigationStyle,
-	@StyleRes defStyleRes: Int = materialR.style.Widget_Design_BottomNavigationView,
+	@StyleRes defStyleRes: Int = materialR.style.Widget_Material3_BottomNavigationView,
 ) : NavigationBarView(context, attrs, defStyleAttr, defStyleRes),
 	CoordinatorLayout.AttachedBehavior {
 

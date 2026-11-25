@@ -530,17 +530,34 @@
 	</style>
 
 	<style name="TextAppearance.Kotatsu.Shadowed.NavLabel" parent="TextAppearance.Material3.LabelMedium">
-		<item name="fontFamily">@font/google_sans_bold</item>
-		<item name="android:fontFamily">@font/google_sans_bold</item>
-		<item name="android:shadowColor">#80000000</item>
-		<item name="android:shadowDx">0</item>
-		<item name="android:shadowDy">1</item>
-		<item name="android:shadowRadius">3</item>
+		<item name="fontFamily">@font/google_sans_medium</item>
+		<item name="android:fontFamily">@font/google_sans_medium</item>
+		<item name="android:textSize">12sp</item>
+		<item name="android:includeFontPadding">false</item>
+	</style>
+
+	<style name="TextAppearance.Kotatsu.NavLabel.Active" parent="TextAppearance.Material3.LabelMedium">
+		<item name="fontFamily">@font/google_sans_medium</item>
+		<item name="android:fontFamily">@font/google_sans_medium</item>
+		<item name="android:textSize">12sp</item>
+		<item name="android:textStyle">bold</item>
+		<item name="android:includeFontPadding">false</item>
+	</style>
+
+	<style name="TextAppearance.Kotatsu.NavLabel.Inactive" parent="TextAppearance.Material3.LabelMedium">
+		<item name="fontFamily">@font/google_sans_medium</item>
+		<item name="android:fontFamily">@font/google_sans_medium</item>
+		<item name="android:textSize">12sp</item>
+		<item name="android:includeFontPadding">false</item>
 	</style>
 
 	<style name="Widget.Kotatsu.ExtendedFab.Continue" parent="Widget.Material3.ExtendedFloatingActionButton.Primary">
 		<item name="android:textAppearance">@style/TextAppearance.Kotatsu.Shadowed</item>
 		<item name="android:includeFontPadding">false</item>
+	</style>
+
+	<style name="Widget.Kotatsu.BottomNavigationView.ActiveIndicator" parent="Widget.Material3Expressive.BottomNavigationView.ActiveIndicator">
+		<item name="android:color">?attr/colorPrimaryContainer</item>
 	</style>
 
 	<!--
@@ -549,10 +566,16 @@
 		against the old values.
 	-->
 	<style name="Widget.Kotatsu.BottomNavigationView.Expressive" parent="Widget.Material3Expressive.BottomNavigationView">
-		<item name="itemTextAppearanceActive">@style/TextAppearance.Kotatsu.Shadowed.NavLabel</item>
-		<item name="itemTextAppearanceInactive">@style/TextAppearance.Kotatsu.Shadowed.NavLabel</item>
-		<item name="horizontalItemTextAppearanceActive">@style/TextAppearance.Kotatsu.Shadowed.NavLabel</item>
-		<item name="horizontalItemTextAppearanceInactive">@style/TextAppearance.Kotatsu.Shadowed.NavLabel</item>
+		<item name="itemIconTint">@color/bottom_menu_active_item</item>
+		<item name="itemTextColor">@color/bottom_menu_active_text</item>
+		<item name="itemActiveIndicatorStyle">@style/Widget.Kotatsu.BottomNavigationView.ActiveIndicator</item>
+		<item name="itemTextAppearanceActive">@style/TextAppearance.Kotatsu.NavLabel.Active</item>
+		<item name="itemTextAppearanceInactive">@style/TextAppearance.Kotatsu.NavLabel.Inactive</item>
+		<item name="horizontalItemTextAppearanceActive">@style/TextAppearance.Kotatsu.NavLabel.Active</item>
+		<item name="horizontalItemTextAppearanceInactive">@style/TextAppearance.Kotatsu.NavLabel.Inactive</item>
+		<item name="android:background">?attr/colorSurfaceContainer</item>
+		<item name="backgroundTint">?attr/colorSurfaceContainer</item>
+		<item name="elevation">0dp</item>
 	</style>
 
 	<!--

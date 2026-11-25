@@ -35,6 +35,7 @@
     <string name="share_s">Share %s</string>
     <string name="search">Search</string>
     <string name="search_manga">Search anything</string>
+    <string name="library">Library</string>
     <string name="manga_downloading_">Downloading…</string>
     <string name="processing_">Processing…</string>
     <string name="download_complete">Downloaded</string>
