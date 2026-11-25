@@ -77,11 +77,13 @@
 			android:layout_marginStart="14dp"
 			android:layout_marginTop="14dp"
 			android:layout_marginEnd="14dp"
+			app:indicatorTrackGapSize="4dp"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toBottomOf="@id/barrier_top"
 			app:trackColor="?attr/colorSurfaceContainerHighest"
 			app:trackCornerRadius="4dp"
+			app:trackThickness="8dp"
 			tools:progress="25" />
 
 		<org.koitharu.kotatsu.core.ui.widgets.NestedRecyclerView
@@ -160,9 +162,12 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/pause"
+			android:textColor="?attr/colorOnPrimaryContainer"
 			android:visibility="gone"
+			app:backgroundTint="?attr/colorPrimaryContainer"
 			app:cornerRadius="20dp"
 			app:icon="@drawable/ic_action_pause"
+			app:iconTint="?attr/colorOnPrimaryContainer"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton
@@ -171,36 +176,52 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/resume"
+			android:textColor="?attr/colorOnPrimaryContainer"
 			android:visibility="gone"
+			app:backgroundTint="?attr/colorPrimaryContainer"
 			app:cornerRadius="20dp"
 			app:icon="@drawable/ic_action_resume"
+			app:iconTint="?attr/colorOnPrimaryContainer"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_skip"
-			style="@style/Widget.Material3.Button.TextButton"
+			style="@style/Widget.Material3.Button.TonalButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/skip"
+			android:textColor="?attr/colorOnSurface"
 			android:visibility="gone"
+			app:backgroundTint="?attr/colorSurfaceContainerHighest"
+			app:cornerRadius="20dp"
+			app:icon="@drawable/ic_action_skip"
+			app:iconTint="?attr/colorOnSurface"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_skip_all"
-			style="@style/Widget.Material3.Button.TextButton"
+			style="@style/Widget.Material3.Button.TonalButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@string/skip_all"
+			android:textColor="?attr/colorOnSurface"
 			android:visibility="gone"
+			app:backgroundTint="?attr/colorSurfaceContainerHighest"
+			app:cornerRadius="20dp"
 			tools:visibility="visible" />
 
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_cancel"
-			style="@style/Widget.Material3.Button.TextButton"
+			style="@style/Widget.Material3.Button.TonalButton"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:text="@android:string/cancel"
+			android:textColor="?attr/colorOnSurface"
 			android:visibility="gone"
+			app:backgroundTint="?attr/colorSurfaceContainerHighest"
+			app:cornerRadius="20dp"
+			app:icon="@drawable/ic_close"
+			app:iconTint="?attr/colorOnSurface"
 			tools:visibility="visible" />
 
 		<androidx.constraintlayout.helper.widget.Flow
