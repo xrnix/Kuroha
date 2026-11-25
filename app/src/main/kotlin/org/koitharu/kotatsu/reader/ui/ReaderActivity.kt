@@ -63,6 +63,7 @@ import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.widgets.ZoomControl
 import org.koitharu.kotatsu.core.util.IdlingDetector
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.core.util.ext.hasGlobalPoint
@@ -151,6 +152,9 @@ class ReaderActivity :
         readerManager = ReaderManager(supportFragmentManager, viewBinding.container, settings)
         einkFlashView = createEInkFlashView()
         setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+        val surfaceContainer = getThemeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+        viewBinding.appbarTop.setBackgroundColor(surfaceContainer)
+        viewBinding.appbarTop.setStatusBarForegroundColor(surfaceContainer)
         if (viewBinding.textViewReaderTitle != null) {
             supportActionBar?.setDisplayShowTitleEnabled(false)
         }

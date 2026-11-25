@@ -4,6 +4,7 @@ import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
@@ -29,6 +30,7 @@ fun chapterListItemAD(
 	AdapterDelegateClickListenerAdapter(this, clickListener).attach(itemView)
 	itemView.isFocusable = false
 	itemView.isFocusableInTouchMode = false
+	val density = context.resources.displayMetrics.density
 
 	bind {
 		binding.textViewTitle.text = item.getTitle(context.resources)
@@ -37,10 +39,13 @@ fun chapterListItemAD(
 			item.isCurrent -> {
 				val accent = accentColorProvider()
 					?: context.getThemeColor(androidx.appcompat.R.attr.colorPrimary)
-				val radius = context.resources.displayMetrics.density * 2f
+				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHighest))
+				binding.root.strokeColor = ColorUtils.setAlphaComponent(accent, (0.35f * 255).toInt())
+				binding.root.strokeWidth = (1.5f * density).toInt()
+				binding.root.cardElevation = 2f * density
 				binding.viewCurrentIndicator.background = GradientDrawable().apply {
 					shape = GradientDrawable.RECTANGLE
-					cornerRadius = radius
+					cornerRadius = 2f * density
 					setColor(accent)
 				}
 				binding.viewCurrentIndicator.isVisible = true
@@ -49,10 +54,13 @@ fun chapterListItemAD(
 				binding.textViewDescription.setTextColor(accent)
 				binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD
 				binding.textViewDescription.typeface = Typeface.DEFAULT_BOLD
-				binding.textViewTitle.textSize = 17f
+				binding.textViewTitle.textSize = 16.5f
 			}
 
 			item.isUnread -> {
+				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainer))
+				binding.root.strokeWidth = 0
+				binding.root.cardElevation = 0f
 				binding.viewCurrentIndicator.background = null
 				binding.viewCurrentIndicator.isVisible = false
 				binding.textViewTitle.drawableStart = if (item.isNew) {
@@ -61,13 +69,16 @@ fun chapterListItemAD(
 					null
 				}
 				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
-				binding.textViewDescription.setTextColor(context.getThemeColorStateList(materialR.attr.colorOutline))
+				binding.textViewDescription.setTextColor(context.getThemeColorStateList(materialR.attr.colorOnSurfaceVariant))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 				binding.textViewDescription.typeface = Typeface.DEFAULT
-				binding.textViewTitle.textSize = 16f
+				binding.textViewTitle.textSize = 15.5f
 			}
 
 			else -> {
+				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerLow))
+				binding.root.strokeWidth = 0
+				binding.root.cardElevation = 0f
 				binding.viewCurrentIndicator.background = null
 				binding.viewCurrentIndicator.isVisible = false
 				binding.textViewTitle.drawableStart = null
@@ -75,14 +86,12 @@ fun chapterListItemAD(
 				binding.textViewDescription.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
 				binding.textViewTitle.typeface = Typeface.DEFAULT
 				binding.textViewDescription.typeface = Typeface.DEFAULT
-				binding.textViewTitle.textSize = 16f
+				binding.textViewTitle.textSize = 15.5f
 			}
 		}
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
-		// Bookmark indicator follows the cover accent (falls back to the theme primary).
 		binding.imageViewBookmarked.imageTintList = accentColorProvider()?.let { ColorStateList.valueOf(it) }
 			?: context.getThemeColorStateList(androidx.appcompat.R.attr.colorPrimary)
 		binding.imageViewDownloaded.isVisible = item.isDownloaded
 	}
 }
-

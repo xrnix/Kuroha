@@ -1,71 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<com.google.android.material.card.MaterialCardView
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
+	style="?attr/materialCardViewFilledStyle"
 	android:layout_width="match_parent"
-	android:layout_height="?attr/listPreferredItemHeight"
-	android:background="@drawable/list_selector"
-	android:baselineAligned="false"
-	android:gravity="center_vertical"
-	android:minHeight="@dimen/chapter_list_item_height"
-	android:orientation="horizontal"
-	android:paddingStart="?android:listPreferredItemPaddingStart"
-	android:defaultFocusHighlightEnabled="false">
-
-	<View
-		android:id="@+id/viewCurrentIndicator"
-		android:layout_width="4dp"
-		android:layout_height="28dp"
-		android:layout_marginEnd="8dp" />
+	android:layout_height="wrap_content"
+	android:layout_marginHorizontal="12dp"
+	android:layout_marginVertical="3dp"
+	android:defaultFocusHighlightEnabled="false"
+	app:cardCornerRadius="16dp"
+	app:strokeWidth="0dp">
 
 	<LinearLayout
-		android:layout_width="0dp"
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:layout_marginVertical="8dp"
-		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
-		android:layout_weight="1"
-		android:orientation="vertical">
+		android:baselineAligned="false"
+		android:gravity="center_vertical"
+		android:orientation="horizontal"
+		android:paddingHorizontal="14dp"
+		android:paddingVertical="12dp">
 
-		<TextView
-			android:id="@+id/textView_title"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:drawablePadding="8dp"
-			android:ellipsize="end"
-			android:singleLine="true"
-			android:textAppearance="?attr/textAppearanceBodyLarge"
-			tools:text="@tools:sample/lorem[15]"
-			tools:textColor="?android:textColorPrimary" />
+		<View
+			android:id="@+id/viewCurrentIndicator"
+			android:layout_width="4dp"
+			android:layout_height="28dp"
+			android:layout_marginEnd="10dp" />
 
-		<TextView
-			android:id="@+id/textView_description"
-			android:layout_width="match_parent"
+		<LinearLayout
+			android:layout_width="0dp"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="2dp"
-			android:ellipsize="end"
-			android:singleLine="true"
-			android:textAppearance="?attr/textAppearanceBodySmall"
-			tools:text="05.10.2021 • Scanlator"
-			tools:textColor="?android:textColorTertiary" />
+			android:layout_marginEnd="8dp"
+			android:layout_weight="1"
+			android:orientation="vertical">
+
+			<TextView
+				android:id="@+id/textView_title"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:drawablePadding="8dp"
+				android:ellipsize="end"
+				android:includeFontPadding="false"
+				android:singleLine="true"
+				android:textAppearance="?attr/textAppearanceBodyLarge"
+				tools:text="@tools:sample/lorem[15]"
+				tools:textColor="?android:textColorPrimary" />
+
+			<TextView
+				android:id="@+id/textView_description"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="3dp"
+				android:ellipsize="end"
+				android:includeFontPadding="false"
+				android:singleLine="true"
+				android:textAppearance="?attr/textAppearanceBodySmall"
+				tools:text="05.10.2021 • Scanlator"
+				tools:textColor="?android:textColorTertiary" />
+		</LinearLayout>
+
+		<ImageView
+			android:id="@+id/imageView_bookmarked"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginEnd="8dp"
+			android:contentDescription="@string/bookmarks"
+			app:srcCompat="@drawable/ic_bookmark_added"
+			app:tint="?colorPrimary" />
+
+		<ImageView
+			android:id="@+id/imageView_downloaded"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:contentDescription="@string/downloaded"
+			app:srcCompat="@drawable/ic_storage"
+			app:tint="?colorOnSurfaceVariant" />
+
 	</LinearLayout>
 
-	<ImageView
-		android:id="@+id/imageView_bookmarked"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
-		android:contentDescription="@string/bookmarks"
-		app:srcCompat="@drawable/ic_bookmark"
-		app:tint="?colorPrimary" />
-
-	<ImageView
-		android:id="@+id/imageView_downloaded"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
-		android:contentDescription="@string/downloaded"
-		app:srcCompat="@drawable/ic_storage"
-		app:tint="?colorOnSurfaceVariant" />
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

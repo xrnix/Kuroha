@@ -28,8 +28,8 @@ class ChaptersPagesAdapter(
 		val isPages = position == 1 && isPagesTabEnabled
 		when {
 			position == 0 -> tab.setIcon(R.drawable.ic_list).setContentDescription(R.string.chapters)
-			isPages -> tab.setIcon(R.drawable.ic_grid_outline).setContentDescription(R.string.pages)
-			else -> tab.setIcon(R.drawable.ic_bookmark).setContentDescription(R.string.bookmarks)
+			isPages -> tab.setIcon(R.drawable.ic_grid).setContentDescription(R.string.pages)
+			else -> tab.setIcon(R.drawable.ic_bookmark_added).setContentDescription(R.string.bookmarks)
 		}
 	}
 }

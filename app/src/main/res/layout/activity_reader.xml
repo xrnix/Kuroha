@@ -60,10 +60,11 @@
 		android:id="@+id/appbar_top"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:background="?colorSurfaceContainer"
+		android:backgroundTint="?attr/colorSurfaceContainer"
 		android:elevation="0dp"
 		app:elevation="0dp"
-		app:liftOnScroll="false">
+		app:liftOnScroll="false"
+		app:statusBarForeground="?attr/colorSurfaceContainer">
 
 		<com.google.android.material.appbar.MaterialToolbar
 			android:id="@id/toolbar"
