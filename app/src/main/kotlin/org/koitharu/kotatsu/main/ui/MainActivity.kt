@@ -164,6 +164,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		setSupportActionBar(viewBinding.searchBar)
 		viewBinding.searchBar.textView.apply {
+			includeFontPadding = false
 			(layoutParams as? android.widget.FrameLayout.LayoutParams)?.apply {
 				gravity = android.view.Gravity.CENTER
 			}
