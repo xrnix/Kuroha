@@ -19,7 +19,9 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.os.AppShortcutManager
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.core.ui.util.applyTonalTopBarStyle
 import org.koitharu.kotatsu.core.util.ext.isHttpUrl
+import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 
 class DetailsMenuProvider(
 	private val activity: FragmentActivity,
@@ -38,6 +40,7 @@ class DetailsMenuProvider(
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
 		menuInflater.inflate(R.menu.opt_details, menu)
+		menu.setOptionalIconsVisibleCompat(true)
 	}
 
 	override fun onPrepareMenu(menu: Menu) {
@@ -48,6 +51,9 @@ class DetailsMenuProvider(
 		menu.findItem(R.id.action_browser).isVisible = manga?.publicUrl?.isHttpUrl() == true
 		menu.findItem(R.id.action_alternatives).isVisible = manga?.source != LocalMangaSource
 		menu.findItem(R.id.action_replace_source).isVisible = manga?.source != LocalMangaSource
+		activity.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.post {
+			activity.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.applyTonalTopBarStyle()
+		}
 		menu.findItem(R.id.action_shortcut).isVisible = appShortcutManager.isPinShortcutSupported
 		menu.findItem(R.id.action_scrobbling).isVisible = viewModel.isScrobblingAvailable
 		menu.findItem(R.id.action_online).isVisible = viewModel.remoteManga.value != null

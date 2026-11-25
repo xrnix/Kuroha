@@ -6,7 +6,6 @@ import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Spinner
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentResultListener
@@ -21,6 +20,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.DownloadFormat
 import org.koitharu.kotatsu.core.ui.AlertDialogFragment
+import org.koitharu.kotatsu.core.ui.menu.MenuPopup
 import org.koitharu.kotatsu.core.ui.widgets.TwoLinesItemView
 import org.koitharu.kotatsu.core.util.ext.findActivity
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
@@ -254,7 +254,7 @@ class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), Vie
 		if (branches.size <= 1) {
 			return
 		}
-		val menu = PopupMenu(v.context, v)
+		val menu = MenuPopup(v)
 		for ((i, branch) in branches.withIndex()) {
 			menu.menu.add(Menu.NONE, Menu.NONE, i, branch ?: getString(R.string.unknown))
 		}
@@ -267,7 +267,7 @@ class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), Vie
 
 	private fun showFirstChaptersCountSelection(v: View) {
 		val option = viewModel.chaptersSelectOptions.value.firstChapters ?: return
-		val menu = PopupMenu(v.context, v)
+		val menu = MenuPopup(v)
 		chaptersCount(option.maxAvailableCount).forEach { i ->
 			menu.menu.add(i.format())
 		}
@@ -282,7 +282,7 @@ class DownloadDialogFragment : AlertDialogFragment<DialogDownloadBinding>(), Vie
 
 	private fun showUnreadChaptersCountSelection(v: View) {
 		val option = viewModel.chaptersSelectOptions.value.unreadChapters ?: return
-		val menu = PopupMenu(v.context, v)
+		val menu = MenuPopup(v)
 		chaptersCount(option.maxAvailableCount).forEach { i ->
 			menu.menu.add(i.format())
 		}

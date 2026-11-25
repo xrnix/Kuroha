@@ -13,6 +13,7 @@ import android.view.View
 import androidx.annotation.AttrRes
 import org.koitharu.kotatsu.R
 import androidx.core.content.ContextCompat
+import com.google.android.material.color.MaterialColors
 import org.koitharu.kotatsu.core.prefs.ProgressIndicatorMode.*
 import org.koitharu.kotatsu.list.domain.ReadingProgress
 import kotlin.math.roundToInt
@@ -33,11 +34,19 @@ class ReadingProgressView @JvmOverloads constructor(
 	private val textSizeSmall = sp(TEXT_SIZE_SMALL_SP)
 
 	private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-		color = SCRIM_COLOR
+		color = MaterialColors.getColor(
+			this@ReadingProgressView,
+			com.google.android.material.R.attr.colorSecondaryContainer,
+			0xFF1F3738.toInt(),
+		)
 		style = Paint.Style.FILL
 	}
 	private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-		color = Color.WHITE
+		color = MaterialColors.getColor(
+			this@ReadingProgressView,
+			com.google.android.material.R.attr.colorOnSecondaryContainer,
+			Color.WHITE,
+		)
 		textAlign = Paint.Align.CENTER
 		typeface = Typeface.DEFAULT_BOLD
 		textSize = textSizeNormal
@@ -46,7 +55,7 @@ class ReadingProgressView @JvmOverloads constructor(
 	private val percentPattern = context.getString(R.string.percent_string_pattern)
 
 	private val checkIcon = ContextCompat.getDrawable(context, R.drawable.ic_check)?.mutate()?.also {
-		it.setTint(Color.WHITE)
+		it.setTint(textPaint.color)
 	}
 
 	private var text: String = ""

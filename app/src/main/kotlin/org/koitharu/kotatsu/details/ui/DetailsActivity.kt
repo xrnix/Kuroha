@@ -70,6 +70,7 @@ import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.sheet.BottomSheetCollapseCallback
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
+import org.koitharu.kotatsu.core.ui.util.applyTonalTopBarStyle
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.core.util.FileSize
 import org.koitharu.kotatsu.core.util.LocaleUtils
@@ -233,6 +234,7 @@ class DetailsActivity :
 			appShortcutManager = shortcutManager,
 		)
 		addMenuProvider(menuProvider)
+		findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.applyTonalTopBarStyle()
 	}
 
 	override fun onProvideAssistContent(outContent: AssistContent) {

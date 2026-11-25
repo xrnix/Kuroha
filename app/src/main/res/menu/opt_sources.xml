@@ -19,11 +19,13 @@
 	<item
 		android:id="@+id/action_no_nsfw"
 		android:checkable="true"
+		android:icon="@drawable/ic_disable"
 		android:title="@string/disable_nsfw"
 		app:showAsAction="never" />
 
 	<item
 		android:id="@+id/action_disable_all"
+		android:icon="@drawable/ic_clear_all"
 		android:title="@string/disable_all"
 		app:showAsAction="never" />
 
