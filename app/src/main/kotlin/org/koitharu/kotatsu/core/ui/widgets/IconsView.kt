@@ -12,6 +12,7 @@ import androidx.core.content.withStyledAttributes
 import androidx.core.view.isNotEmpty
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.color.MaterialColors
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.history.ui.util.ReadingProgressView
 import kotlin.math.roundToInt
@@ -28,7 +29,11 @@ class IconsView @JvmOverloads constructor(
 	private var iconSpacing = 0
 	private var isSmall = false
 	private var iconSize = 0
-	private val savedTint = ContextCompat.getColor(context, R.color.list_badge_saved)
+	private val savedTint = MaterialColors.getColor(
+		this,
+		androidx.appcompat.R.attr.colorPrimary,
+		ContextCompat.getColor(context, R.color.list_badge_saved),
+	)
 	private val favouriteTint = ContextCompat.getColor(context, R.color.list_badge_favourite)
 
 	init {

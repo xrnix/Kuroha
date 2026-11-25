@@ -36,16 +36,16 @@ class ReadingProgressView @JvmOverloads constructor(
 	private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 		color = MaterialColors.getColor(
 			this@ReadingProgressView,
-			com.google.android.material.R.attr.colorSecondaryContainer,
-			0xFF1F3738.toInt(),
+			com.google.android.material.R.attr.colorSurfaceContainerHigh,
+			0xFF1B2627.toInt(),
 		)
 		style = Paint.Style.FILL
 	}
 	private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
 		color = MaterialColors.getColor(
 			this@ReadingProgressView,
-			com.google.android.material.R.attr.colorOnSecondaryContainer,
-			Color.WHITE,
+			androidx.appcompat.R.attr.colorPrimary,
+			0xFF80D4D8.toInt(),
 		)
 		textAlign = Paint.Align.CENTER
 		typeface = Typeface.DEFAULT_BOLD

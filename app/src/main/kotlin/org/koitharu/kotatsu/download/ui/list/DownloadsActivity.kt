@@ -19,6 +19,7 @@ import org.koitharu.kotatsu.core.ui.list.ListSelectionController
 import org.koitharu.kotatsu.core.ui.list.RecyclerScrollKeeper
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
+import org.koitharu.kotatsu.core.ui.util.applyTonalTopBarStyle
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.databinding.ActivityDownloadsBinding
@@ -44,6 +45,7 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityDownloadsBinding.inflate(layoutInflater))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+		findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.applyTonalTopBarStyle()
 		val downloadsAdapter = DownloadsAdapter(this, this)
 		val decoration = TypedListSpacingDecoration(this, false)
 		selectionController = ListSelectionController(

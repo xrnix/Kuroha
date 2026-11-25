@@ -52,13 +52,15 @@ open class FaviconDrawable(
 			colorBackground = getColorStateList(R.styleable.FaviconFallbackDrawable_backgroundColor) ?: colorBackground
 			colorStroke = getColorStateList(R.styleable.FaviconFallbackDrawable_strokeColor) ?: colorStroke
 			cornerSize = getDimension(R.styleable.FaviconFallbackDrawable_cornerSize, cornerSize)
-			paint.strokeWidth = getDimension(R.styleable.FaviconFallbackDrawable_strokeWidth, 0f) * 2f
+			paint.strokeWidth = 0f
 			intrinsicSize = getDimensionPixelSize(R.styleable.FaviconFallbackDrawable_drawableSize, intrinsicSize)
 		}
 		paint.textAlign = Paint.Align.CENTER
 		paint.isFakeBoldText = true
-		colorForeground = KotatsuColors.random(name)
-		currentForegroundColor = MaterialColors.harmonize(colorForeground, colorBackground.defaultColor)
+		val pair = PALETTE[(name.hashCode() and 0x7fffffff) % PALETTE.size]
+		colorBackground = ColorStateList.valueOf(pair.first)
+		colorForeground = pair.second
+		currentForegroundColor = pair.second
 		onStateChange(state)
 	}
 
@@ -75,8 +77,8 @@ open class FaviconDrawable(
 	override fun onBoundsChange(bounds: Rect) {
 		super.onBoundsChange(bounds)
 		boundsF.set(bounds)
-		val innerWidth = bounds.width() - (paint.strokeWidth * 2f)
-		paint.textSize = getTextSizeForWidth(innerWidth, letter) * 0.5f
+		val side = minOf(bounds.width(), bounds.height()).toFloat().coerceAtLeast(1f)
+		paint.textSize = side * 0.46f
 		paint.getTextBounds(letter, 0, letter.length, textBounds)
 		clipPath.reset()
 		clipPath.addRoundRect(boundsF, cornerSize, cornerSize, Path.Direction.CW)
@@ -111,24 +113,25 @@ open class FaviconDrawable(
 		paint.color = currentBackgroundColor
 		paint.style = Paint.Style.FILL
 		canvas.drawPaint(paint)
-		// letter
+		// centered monogram letter
 		paint.color = currentForegroundColor
-		val cx = (boundsF.left + boundsF.right) * 0.6f
-		val ty = boundsF.bottom * 0.7f + textBounds.height() * 0.5f - textBounds.bottom
+		val cx = boundsF.centerX()
+		val ty = boundsF.centerY() - textBounds.exactCenterY()
 		canvas.drawText(letter, cx, ty, paint)
-		if (paint.strokeWidth > 0f) {
-			// stroke
-			paint.color = currentStrokeColor
-			paint.style = Paint.Style.STROKE
-			canvas.drawPath(clipPath, paint)
-		}
 	}
 
-	private fun getTextSizeForWidth(width: Float, text: String): Float {
-		val testTextSize = 48f
-		paint.textSize = testTextSize
-		paint.getTextBounds(text, 0, text.length, tempRect)
-		return testTextSize * width / tempRect.width()
+	companion object {
+
+		private val PALETTE = arrayOf(
+			0xFF1F4E6D.toInt() to 0xFFCFE6F7.toInt(), // Ocean Cobalt
+			0xFF453B6B.toInt() to 0xFFE5DEFA.toInt(), // Deep Amethyst
+			0xFF1A524B.toInt() to 0xFFC2EFE7.toInt(), // Emerald Teal
+			0xFF6B3848.toInt() to 0xFFFAD8E2.toInt(), // Terracotta Rose
+			0xFF5F4418.toInt() to 0xFFFBE2BD.toInt(), // Warm Amber
+			0xFF2E5332.toInt() to 0xFFCFEBD0.toInt(), // Forest Sage
+			0xFF333D79.toInt() to 0xFFDCE1FA.toInt(), // Royal Indigo
+			0xFF6A3623.toInt() to 0xFFFADCCF.toInt(), // Warm Copper
+		)
 	}
 
 	class Factory(
