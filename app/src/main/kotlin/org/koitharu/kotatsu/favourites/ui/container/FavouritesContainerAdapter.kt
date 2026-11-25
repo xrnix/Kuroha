@@ -9,9 +9,11 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.FlowCollector
+import org.koitharu.kotatsu.bookmarks.ui.AllBookmarksFragment
 import org.koitharu.kotatsu.core.util.ContinuationResumeRunnable
 import org.koitharu.kotatsu.favourites.ui.list.FavouritesListFragment
 import org.koitharu.kotatsu.list.ui.ListModelDiffCallback
+import org.koitharu.kotatsu.local.ui.LocalListFragment
 import kotlin.coroutines.suspendCoroutine
 
 class FavouritesContainerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment),
@@ -36,7 +38,11 @@ class FavouritesContainerAdapter(fragment: Fragment) : FragmentStateAdapter(frag
 
 	override fun createFragment(position: Int): Fragment {
 		val item = differ.currentList[position]
-		return FavouritesListFragment.newInstance(item.id)
+		return when (item.id) {
+			FavouritesContainerViewModel.ID_LOCAL -> LocalListFragment()
+			FavouritesContainerViewModel.ID_BOOKMARKS -> AllBookmarksFragment()
+			else -> FavouritesListFragment.newInstance(item.id)
+		}
 	}
 
 	override suspend fun emit(value: List<FavouriteTabModel>) = suspendCoroutine { cont ->

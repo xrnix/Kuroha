@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicText
@@ -626,9 +627,11 @@ fun FloatingNavBar(
 		verticalAlignment = Alignment.CenterVertically,
 	) {
 		// Outer gesture box stays un-transformed so container wall-stretching never feeds back into
-		// touch coordinates.
+		// touch coordinates. weight(1f, fill = false) lets the pill yield width on narrow phones
+		// before squeezing the adjacent continue-reading FAB.
 		Box(
 			modifier = Modifier
+				.weight(1f, fill = false)
 				.wrapContentWidth()
 				.pointerInput(Unit) {
 					val edgeGrabMarginPx = 6.dp.toPx()
@@ -1208,7 +1211,7 @@ private fun FloatingContinueButton(
 			contentColor = content,
 			border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
 			modifier = Modifier
-				.size(56.dp)
+				.requiredSize(56.dp)
 				.semantics { contentDescription = label },
 		) {
 			Box(

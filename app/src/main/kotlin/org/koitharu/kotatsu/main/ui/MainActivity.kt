@@ -80,6 +80,7 @@ import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
+import org.koitharu.kotatsu.explore.ui.ExploreContainerFragment
 import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.databinding.ActivityMainBinding
 import org.koitharu.kotatsu.details.service.MangaPrefetchService
@@ -488,14 +489,28 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	}
 
 	private fun adjustAppbar(topFragment: Fragment, transition: MainNavigationDelegate.TabTransition) {
-		if (topFragment is FavouritesContainerFragment) {
-			fadingAppbarMediator.bind()
-			topFragment.showTabsInAppBar(transition)
-		} else {
-			fadingAppbarMediator.unbind()
-			val favourites = supportFragmentManager
-				.findFragmentByTag(FavouritesContainerFragment::class.java.name)
-			(favourites as? FavouritesContainerFragment)?.hideTabsFromAppBar(transition)
+		val favourites = supportFragmentManager
+			.findFragmentByTag(FavouritesContainerFragment::class.java.name) as? FavouritesContainerFragment
+		val explore = supportFragmentManager
+			.findFragmentByTag(ExploreContainerFragment::class.java.name) as? ExploreContainerFragment
+		when (topFragment) {
+			is FavouritesContainerFragment -> {
+				fadingAppbarMediator.bind()
+				explore?.hideTabsFromAppBar(transition)
+				topFragment.showTabsInAppBar(transition)
+			}
+
+			is ExploreContainerFragment -> {
+				fadingAppbarMediator.bind()
+				favourites?.hideTabsFromAppBar(transition)
+				topFragment.showTabsInAppBar(transition)
+			}
+
+			else -> {
+				fadingAppbarMediator.unbind()
+				favourites?.hideTabsFromAppBar(transition)
+				explore?.hideTabsFromAppBar(transition)
+			}
 		}
 	}
 

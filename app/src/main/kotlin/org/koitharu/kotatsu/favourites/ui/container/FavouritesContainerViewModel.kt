@@ -41,20 +41,22 @@ class FavouritesContainerViewModel @Inject constructor(
 		list.toUi(showAll)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
 
-	val isEmpty = categoriesStateFlow.map {
-		it?.isEmpty() == true
-	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
+	val isEmpty = kotlinx.coroutines.flow.MutableStateFlow(false)
 
 	private fun List<FavouriteCategory>.toUi(showAll: Boolean): List<FavouriteTabModel> {
-		if (isEmpty()) {
-			return emptyList()
-		}
-		val result = ArrayList<FavouriteTabModel>(if (showAll) size + 1 else size)
-		if (showAll) {
+		val result = ArrayList<FavouriteTabModel>(size + 3)
+		if (isNotEmpty() && showAll) {
 			result.add(FavouriteTabModel(NO_ID, null))
 		}
 		mapTo(result) { FavouriteTabModel(it.id, it.title) }
+		result.add(FavouriteTabModel(ID_LOCAL, null))
+		result.add(FavouriteTabModel(ID_BOOKMARKS, null))
 		return result
+	}
+
+	companion object {
+		const val ID_LOCAL = -2L
+		const val ID_BOOKMARKS = -3L
 	}
 
 	fun hide(categoryId: Long) {

@@ -14,10 +14,17 @@ class FavouritesTabConfigurationStrategy(
 
 	override fun onConfigureTab(tab: TabLayout.Tab, position: Int) {
 		val item = adapter.getItem(position)
-		tab.text = item.title ?: tab.view.context.getString(R.string.all_favourites)
+		val ctx = tab.view.context
+		tab.text = when (item.id) {
+			FavouritesContainerViewModel.ID_LOCAL -> ctx.getString(R.string.on_device)
+			FavouritesContainerViewModel.ID_BOOKMARKS -> ctx.getString(R.string.bookmarks)
+			else -> item.title ?: ctx.getString(R.string.all_favourites)
+		}
 		tab.tag = item
-		PopupMenuMediator(
-			FavouriteTabPopupMenuProvider(tab.view.context, router, viewModel, item.id)
-		).attach(tab.view)
+		if (item.id != FavouritesContainerViewModel.ID_LOCAL && item.id != FavouritesContainerViewModel.ID_BOOKMARKS) {
+			PopupMenuMediator(
+				FavouriteTabPopupMenuProvider(ctx, router, viewModel, item.id),
+			).attach(tab.view)
+		}
 	}
 }
