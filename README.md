@@ -121,6 +121,7 @@ Unlike traditional readers that depend on separate third-party extension APK ins
 ## Screenshots
 
 <div align="center">
+  <h3>Phone Experience</h3>
   <table>
     <tr>
       <td align="center"><b>Library & Progress</b></td>
@@ -133,14 +134,14 @@ Unlike traditional readers that depend on separate third-party extension APK ins
       <td><img src="metadata/en-US/images/phoneScreenshots/3.png" width="240" alt="Reader View"/></td>
     </tr>
     <tr>
-      <td align="center"><b>Sources Catalog</b></td>
-      <td align="center"><b>Search & Filters</b></td>
-      <td align="center"><b>Source Settings</b></td>
+      <td align="center"><b>Explore & Discovery</b></td>
+      <td align="center"><b>Downloads Manager</b></td>
+      <td align="center"><b>Settings & Theming</b></td>
     </tr>
     <tr>
-      <td><img src="metadata/en-US/images/phoneScreenshots/4.png" width="240" alt="Sources Catalog"/></td>
-      <td><img src="metadata/en-US/images/phoneScreenshots/5.png" width="240" alt="Search"/></td>
-      <td><img src="metadata/en-US/images/phoneScreenshots/6.png" width="240" alt="Source Settings"/></td>
+      <td><img src="metadata/en-US/images/phoneScreenshots/4.png" width="240" alt="Explore & Discovery"/></td>
+      <td><img src="metadata/en-US/images/phoneScreenshots/5.png" width="240" alt="Downloads Manager"/></td>
+      <td><img src="metadata/en-US/images/phoneScreenshots/6.png" width="240" alt="Settings & Theming"/></td>
     </tr>
   </table>
 </div>
@@ -149,8 +150,38 @@ Unlike traditional readers that depend on separate third-party extension APK ins
 
 <div align="center">
   <h3>Tablet & Large Screen Optimization</h3>
-  <img src="metadata/en-US/images/tenInchScreenshots/1.png" width="400" alt="Tablet Landscape 1"/>
-  <img src="metadata/en-US/images/tenInchScreenshots/2.png" width="400" alt="Tablet Landscape 2"/>
+  <table>
+    <tr>
+      <td align="center"><b>Adaptive Navigation Rail & Library Grid</b></td>
+      <td align="center"><b>Dual-Pane Manga Details & Chapters</b></td>
+    </tr>
+    <tr>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/1.png" width="420" alt="Adaptive Navigation Rail & Library Grid"/></td>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/2.png" width="420" alt="Dual-Pane Manga Details"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>Full-Screen Landscape Reader & Controls</b></td>
+      <td align="center"><b>Explore & Discovery Carousels</b></td>
+    </tr>
+    <tr>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/3.png" width="420" alt="Landscape Reader & Controls"/></td>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/4.png" width="420" alt="Explore & Discovery Carousels"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>Sources & Catalogs Sheet</b></td>
+      <td align="center"><b>Downloads Manager</b></td>
+    </tr>
+    <tr>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/5.png" width="420" alt="Sources & Catalogs Sheet"/></td>
+      <td><img src="metadata/en-US/images/tenInchScreenshots/6.png" width="420" alt="Downloads Manager"/></td>
+    </tr>
+    <tr>
+      <td align="center" colspan="2"><b>Material 3 Dual-Pane Settings</b></td>
+    </tr>
+    <tr>
+      <td align="center" colspan="2"><img src="metadata/en-US/images/tenInchScreenshots/7.png" width="420" alt="Material 3 Dual-Pane Settings"/></td>
+    </tr>
+  </table>
 </div>
 
 ---
