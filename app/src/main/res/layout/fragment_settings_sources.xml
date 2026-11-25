@@ -9,6 +9,7 @@
 	android:background="?android:colorBackground"
 	android:clipToPadding="false"
 	android:orientation="vertical"
+	android:paddingVertical="8dp"
 	android:scrollbars="vertical"
 	app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 	tools:listitem="@layout/item_source_config" />

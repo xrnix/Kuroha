@@ -48,6 +48,18 @@ class ListConfigViewModel @Inject constructor(
 			settings.gridSize = value
 		}
 
+	var isTitleOverCover: Boolean
+		get() = settings.isTitleOverCover
+		set(value) {
+			settings.isTitleOverCover = value
+		}
+
+	var isGridSpacingIncreased: Boolean
+		get() = settings.isGridSpacingIncreased
+		set(value) {
+			settings.isGridSpacingIncreased = value
+		}
+
 	val isGroupingSupported: Boolean
 		get() = section == ListConfigSection.History || section == ListConfigSection.Updated
 

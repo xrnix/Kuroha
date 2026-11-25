@@ -31,6 +31,7 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.model.titleRes
 import org.koitharu.kotatsu.core.ui.util.FadingAppbarMediator
+import org.koitharu.kotatsu.core.ui.util.applyTonalActionMenuStyle
 import org.koitharu.kotatsu.core.util.ViewBadge
 import org.koitharu.kotatsu.core.util.ext.consumeSystemBarsInsets
 import org.koitharu.kotatsu.core.util.ext.end
@@ -82,6 +83,7 @@ class MangaListActivity :
 		val sortOrder = intent.getSerializableExtraCompat<SortOrder>(AppRouter.KEY_SORT_ORDER)
 		source = MangaSource(intent.getStringExtra(AppRouter.KEY_SOURCE))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
+		findViewById<ViewGroup>(R.id.toolbar)?.applyTonalActionMenuStyle()
 		if (viewBinding.containerFilterHeader != null) {
 			viewBinding.appbar.addOnOffsetChangedListener(this)
 		}

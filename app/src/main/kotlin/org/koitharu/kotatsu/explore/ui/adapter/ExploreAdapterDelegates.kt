@@ -47,12 +47,10 @@ fun exploreButtonsAD(
 	{ layoutInflater, parent -> ItemExploreButtonsBinding.inflate(layoutInflater, parent, false) },
 ) {
 
-	binding.buttonBookmarks.setOnClickListener(clickListener)
 	binding.buttonDownloads.setOnClickListener(clickListener)
 	binding.buttonLocal.setOnClickListener(clickListener)
 	binding.buttonRandom.setOnClickListener(clickListener)
 	binding.buttonPresets.setOnClickListener(clickListener)
-	binding.buttonPresetsDropdown.setOnClickListener(clickListener)
 
 	bind {
 		if (item.isRandomLoading) {
@@ -65,7 +63,7 @@ fun exploreButtonsAD(
 		if (presetName != null) {
 			binding.buttonPresets.text = presetName
 		} else {
-			binding.buttonPresets.setText(R.string.source_presets)
+			binding.buttonPresets.setText(R.string.tap_grid_presets)
 		}
 	}
 }

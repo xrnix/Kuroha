@@ -81,6 +81,7 @@ import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.setOptionalIconsVisibleCompat
 import org.koitharu.kotatsu.explore.ui.ExploreContainerFragment
+import org.koitharu.kotatsu.explore.ui.SourcesActivity
 import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.databinding.ActivityMainBinding
 import org.koitharu.kotatsu.details.service.MangaPrefetchService
@@ -181,8 +182,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.bottomNav?.setOnContinueClickListener { viewModel.openLastReader() }
 		viewBinding.bottomNav?.setOnContinueLongClickListener { viewModel.openLastDetails() }
 		viewBinding.buttonOverflow.setOnClickListener(this::showMainOverflowMenu)
-		viewBinding.buttonSettings.setOnClickListener {
-			router.openSettings()
+		viewBinding.buttonSources.setOnClickListener {
+			startActivity(android.content.Intent(this, SourcesActivity::class.java))
 		}
 		viewBinding.buttonUpdate.setOnClickListener { router.openAppUpdate() }
 		viewBinding.buttonUpdateDismiss.setOnClickListener {
@@ -235,7 +236,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		settings.observe(AppSettings.KEY_NAV_LEGACY).observe(this) { adjustFabVisibility() }
 		viewModel.feedCounter.observe(this, ::onFeedCounterChanged)
 		viewModel.appUpdate.observe(this) { update ->
-			viewBinding.badgeSettingsUpdate.visibility = if (update != null) View.VISIBLE else View.GONE
 			viewBinding.layoutUpdatePrompt.isVisible =
 				update != null && update.name != settings.dismissedUpdateVersion
 		}

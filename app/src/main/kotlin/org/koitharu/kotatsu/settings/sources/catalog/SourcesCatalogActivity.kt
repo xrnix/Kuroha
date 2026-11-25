@@ -5,7 +5,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.viewModels
-import androidx.appcompat.widget.PopupMenu
+import org.koitharu.kotatsu.core.ui.menu.MenuPopup
+import org.koitharu.kotatsu.core.ui.util.applyTonalActionMenuStyle
 import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
@@ -66,6 +67,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			updateFilers(it.first, it.second, it.third)
 		}
 		addMenuProvider(SourcesCatalogMenuProvider(this, viewModel, this))
+		viewBinding.toolbar.applyTonalActionMenuStyle()
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -155,7 +157,7 @@ class SourcesCatalogActivity : BaseActivity<ActivitySourcesCatalogBinding>(),
 			it to it?.toLocale()
 		}
 		locales.sortWith(compareBy(nullsFirst(LocaleComparator())) { it.second })
-		val menu = PopupMenu(this, anchor)
+		val menu = MenuPopup(anchor)
 		for ((i, lc) in locales.withIndex()) {
 			menu.menu.add(Menu.NONE, Menu.NONE, i, lc.second.getDisplayName(this))
 		}

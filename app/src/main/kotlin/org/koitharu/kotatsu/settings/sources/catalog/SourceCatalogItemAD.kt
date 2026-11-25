@@ -32,13 +32,6 @@ fun sourceCatalogItemSourceAD(
 	binding.root.setOnClickListener { v ->
 		listener.onItemClick(item, v)
 	}
-	val basePadding = context.getThemeDimensionPixelOffset(
-		appcompatR.attr.listPreferredItemPaddingEnd,
-		binding.root.paddingStart,
-	)
-	binding.root.updatePaddingRelative(
-		end = (basePadding - context.resources.getDimensionPixelOffset(R.dimen.margin_small)).coerceAtLeast(0),
-	)
 
 	val hotMarker = HotSourceMarker(context)
 

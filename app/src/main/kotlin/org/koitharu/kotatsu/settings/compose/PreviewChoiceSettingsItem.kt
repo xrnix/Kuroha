@@ -256,35 +256,51 @@ fun listModePreviewOptions(labels: List<String>): List<PreviewOption> {
 	val cover = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
 	val line = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
 	val faint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f)
-	return listOf(
-		PreviewOption(labels[0]) {
-			repeat(4) { i ->
-				val y = 0.15f + i * 0.19f
-				block(cover, 0.14f, y, 0.15f, 0.13f)
-				block(line, 0.36f, y + 0.04f, 0.48f, 0.05f)
-			}
-		},
-		PreviewOption(labels[1]) {
-			repeat(2) { i ->
-				val y = 0.14f + i * 0.4f
-				block(cover, 0.14f, y, 0.26f, 0.32f)
-				block(line, 0.47f, y + 0.03f, 0.38f, 0.05f)
-				block(faint, 0.47f, y + 0.13f, 0.3f, 0.05f)
-				block(faint, 0.47f, y + 0.23f, 0.2f, 0.05f)
-			}
-		},
-		PreviewOption(labels[2]) {
-			repeat(4) { i ->
-				val x = 0.14f + (i % 2) * 0.39f
-				val y = 0.12f + (i / 2) * 0.41f
-				block(cover, x, y, 0.33f, 0.27f)
-				block(line, x, y + 0.3f, 0.24f, 0.04f)
-			}
-		},
-		PreviewOption(labels[3]) {
-			repeat(4) { i ->
-				block(cover, 0.14f + (i % 2) * 0.39f, 0.12f + (i / 2) * 0.4f, 0.33f, 0.36f)
-			}
-		},
-	)
+	return buildList {
+		if (labels.isNotEmpty()) {
+			add(
+				PreviewOption(labels[0]) {
+					repeat(4) { i ->
+						val y = 0.15f + i * 0.19f
+						block(cover, 0.14f, y, 0.15f, 0.13f)
+						block(line, 0.36f, y + 0.04f, 0.48f, 0.05f)
+					}
+				},
+			)
+		}
+		if (labels.size > 1) {
+			add(
+				PreviewOption(labels[1]) {
+					repeat(2) { i ->
+						val y = 0.14f + i * 0.4f
+						block(cover, 0.14f, y, 0.26f, 0.32f)
+						block(line, 0.47f, y + 0.03f, 0.38f, 0.05f)
+						block(faint, 0.47f, y + 0.13f, 0.3f, 0.05f)
+						block(faint, 0.47f, y + 0.23f, 0.2f, 0.05f)
+					}
+				},
+			)
+		}
+		if (labels.size > 2) {
+			add(
+				PreviewOption(labels[2]) {
+					repeat(4) { i ->
+						val x = 0.14f + (i % 2) * 0.39f
+						val y = 0.12f + (i / 2) * 0.41f
+						block(cover, x, y, 0.33f, 0.27f)
+						block(line, x, y + 0.3f, 0.24f, 0.04f)
+					}
+				},
+			)
+		}
+		if (labels.size > 3) {
+			add(
+				PreviewOption(labels[3]) {
+					repeat(4) { i ->
+						block(cover, 0.14f + (i % 2) * 0.39f, 0.12f + (i / 2) * 0.4f, 0.33f, 0.36f)
+					}
+				},
+			)
+		}
+	}
 }
