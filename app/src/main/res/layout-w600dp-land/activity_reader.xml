@@ -58,9 +58,12 @@
 			android:id="@id/toolbar"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
+			android:minHeight="?actionBarSize"
 			android:elevation="4dp"
 			app:contentInsetEndWithActions="@dimen/reader_toolbar_actions_end_inset"
 			app:elevation="4dp"
+			app:subtitleTextAppearance="@style/TextAppearance.Material3.BodySmall"
+			app:titleTextAppearance="@style/TextAppearance.Material3.TitleMedium"
 			tools:menu="@menu/opt_reader">
 
 			<org.koitharu.kotatsu.reader.ui.ReaderActionsView

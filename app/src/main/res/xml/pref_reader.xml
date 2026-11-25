@@ -183,31 +183,6 @@
 
 	</PreferenceCategory>
 
-	<PreferenceCategory android:title="@string/hidden_images">
-
-		<SwitchPreferenceCompat
-			android:defaultValue="true"
-			android:icon="@drawable/ic_delete"
-			android:key="reader_erase_gesture"
-			android:summary="@string/erase_gesture_summary"
-			android:title="@string/erase_gesture" />
-
-		<Preference
-			android:icon="@drawable/ic_info_outline"
-			android:key="erase_tutorial"
-			android:persistent="false"
-			android:summary="@string/erase_tutorial_again_summary"
-			android:title="@string/erase_tutorial_again" />
-
-		<PreferenceScreen
-			android:fragment="org.koitharu.kotatsu.reader.ui.erase.HiddenImagesFragment"
-			android:icon="@drawable/ic_eye_off"
-			android:key="hidden_images"
-			android:summary="@string/hidden_images_summary"
-			android:title="@string/hidden_images" />
-
-	</PreferenceCategory>
-
 	<PreferenceCategory android:title="@string/advanced">
 
 		<ListPreference

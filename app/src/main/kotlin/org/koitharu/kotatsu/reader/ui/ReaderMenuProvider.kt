@@ -9,7 +9,6 @@ import org.koitharu.kotatsu.R
 class ReaderMenuProvider(
 	private val onOpenMenu: () -> Unit,
 	private val isLandscape: Boolean,
-	private val onHiddenImages: () -> Unit,
 ) : MenuProvider {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -26,12 +25,6 @@ class ReaderMenuProvider(
 
 			R.id.action_info -> {
 				// TODO
-				true
-			}
-
-			// Right where a mistake is noticed: the page it went from is what brings it to mind
-			R.id.action_hidden_images -> {
-				onHiddenImages()
 				true
 			}
 

@@ -5,7 +5,7 @@
 
 	<item
 		android:id="@+id/action_reader_menu"
-		android:icon="@drawable/ic_tune"
+		android:icon="@drawable/ic_more_vert"
 		android:title="@string/options"
 		app:showAsAction="ifRoom" />
 
@@ -15,11 +15,5 @@
 		android:title="@string/details"
 		android:visible="false"
 		app:showAsAction="always" />
-
-	<item
-		android:id="@+id/action_hidden_images"
-		android:icon="@drawable/ic_eye_off"
-		android:title="@string/hidden_images"
-		app:showAsAction="never" />
 
 </menu>

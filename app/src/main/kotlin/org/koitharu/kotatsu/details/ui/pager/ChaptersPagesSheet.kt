@@ -1,15 +1,21 @@
 package org.koitharu.kotatsu.details.ui.pager
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.view.ActionMode
+import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
@@ -24,8 +30,10 @@ import org.koitharu.kotatsu.core.ui.util.ActionModeListener
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
+import org.koitharu.kotatsu.core.ui.util.applyTonalActionMenuStyle
 import org.koitharu.kotatsu.core.util.ext.doOnPageChanged
 import org.koitharu.kotatsu.core.util.ext.findCurrentPagerFragment
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.menuView
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
@@ -36,6 +44,7 @@ import org.koitharu.kotatsu.details.ui.DetailsViewModel
 import org.koitharu.kotatsu.details.ui.ReadButtonDelegate
 import org.koitharu.kotatsu.download.ui.worker.DownloadStartedObserver
 import javax.inject.Inject
+import com.google.android.material.R as materialR
 
 @AndroidEntryPoint
 class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
@@ -48,8 +57,21 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 
 	private val viewModel by ChaptersPagesViewModel.ActivityVMLazy(this)
 
+	override fun getTheme(): Int {
+		return if (context?.resources?.getBoolean(R.bool.is_tablet) == true) {
+			super.getTheme()
+		} else {
+			R.style.ThemeOverlay_Kotatsu_DetailsBottomSheetDialog
+		}
+	}
+
 	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): SheetChaptersPagesBinding {
-		return SheetChaptersPagesBinding.inflate(inflater, container, false)
+		val themedInflater = if (showsDialog) {
+			inflater.cloneInContext(ContextThemeWrapper(inflater.context, R.style.ThemeOverlay_Kotatsu_RaisedContainers))
+		} else {
+			inflater
+		}
+		return SheetChaptersPagesBinding.inflate(themedInflater, container, false)
 	}
 
 	override fun onViewBindingCreated(binding: SheetChaptersPagesBinding, savedInstanceState: Bundle?) {
@@ -62,8 +84,12 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		if (!adapter.isPagesTabEnabled) {
 			defaultTab = (defaultTab - 1).coerceAtLeast(TAB_CHAPTERS)
 		}
-		(viewModel as? DetailsViewModel)?.let { dvm ->
-			ReadButtonDelegate(binding.splitButtonRead, dvm, router).attach(viewLifecycleOwner)
+		if (dialog == null) {
+			(viewModel as? DetailsViewModel)?.let { dvm ->
+				ReadButtonDelegate(binding.splitButtonRead, dvm, router).attach(viewLifecycleOwner)
+			}
+		} else {
+			binding.splitButtonRead.isVisible = false
 		}
 		binding.pager.offscreenPageLimit = adapter.itemCount
 		binding.pager.recyclerView?.isNestedScrollingEnabled = false
@@ -77,6 +103,7 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		val menuProvider = ChapterPagesMenuProvider(viewModel, this, binding.pager, settings)
 		onBackPressedDispatcher.addCallback(viewLifecycleOwner, menuProvider)
 		binding.toolbar.addMenuProvider(menuProvider)
+		binding.toolbar.applyTonalActionMenuStyle()
 
 		val menuInvalidator = MenuInvalidator(binding.toolbar)
 		viewModel.isChaptersReversed.observe(viewLifecycleOwner, menuInvalidator)
@@ -96,17 +123,49 @@ class ChaptersPagesSheet : BaseAdaptiveSheet<SheetChaptersPagesBinding>(),
 		}
 	}
 
+	override fun onStart() {
+		super.onStart()
+		applyDetailsSheetSurface(dialog as? BottomSheetDialog)
+	}
+
+	private fun applyDetailsSheetSurface(sheetDialog: BottomSheetDialog?) {
+		val sheetView = sheetDialog?.findViewById<View>(materialR.id.design_bottom_sheet) ?: return
+		val surfaceColor = requireActivity().getThemeColor(materialR.attr.colorSurfaceContainerLow)
+		val surfaceColorState = ColorStateList.valueOf(surfaceColor)
+		sheetView.elevation = 0f
+		sheetView.clipToOutline = true
+		sheetView.backgroundTintList = surfaceColorState
+		viewBinding?.run {
+			root.setBackgroundColor(surfaceColor)
+			headerBar.setBackgroundColor(surfaceColor)
+			toolbar.setBackgroundColor(surfaceColor)
+			layoutTouchBlock.setBackgroundColor(surfaceColor)
+			pager.setBackgroundColor(surfaceColor)
+		}
+		fun applyShapeSurface() {
+			(sheetView.background as? MaterialShapeDrawable)?.apply {
+				fillColor = surfaceColorState
+				tintList = surfaceColorState
+				elevation = 0f
+				parentAbsoluteElevation = 0f
+			}
+		}
+		applyShapeSurface()
+		sheetView.doOnLayout { applyShapeSurface() }
+	}
+
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat = insets
 
 	override fun onStateChanged(sheet: View, newState: Int) {
-        val binding = viewBinding ?: return
-        binding.layoutTouchBlock.isTouchEventsAllowed = dialog != null || newState != STATE_COLLAPSED
-        if (newState == STATE_DRAGGING || newState == STATE_SETTLING) {
-            return
-        }
+		val binding = viewBinding ?: return
+		binding.layoutTouchBlock.isTouchEventsAllowed = dialog != null || newState != STATE_COLLAPSED
+		if (newState == STATE_DRAGGING || newState == STATE_SETTLING) {
+			return
+		}
 		val isActionModeStarted = actionModeDelegate?.isActionModeStarted == true
-		binding.toolbar.menuView?.isVisible = newState == STATE_EXPANDED && !isActionModeStarted
-		binding.splitButtonRead.isVisible = newState != STATE_EXPANDED && !isActionModeStarted
+		val isModalOrExpanded = dialog != null || newState == STATE_EXPANDED
+		binding.toolbar.menuView?.isVisible = isModalOrExpanded && !isActionModeStarted
+		binding.splitButtonRead.isVisible = dialog == null && newState != STATE_EXPANDED && !isActionModeStarted
 			&& viewModel is DetailsViewModel
 	}
 

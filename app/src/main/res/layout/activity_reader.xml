@@ -68,10 +68,13 @@
 			android:id="@id/toolbar"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
+			android:minHeight="?actionBarSize"
 			android:elevation="4dp"
 			app:contentInsetEndWithActions="@dimen/reader_toolbar_actions_end_inset"
 			app:elevation="4dp"
 			app:popupTheme="@style/ThemeOverlay.Kotatsu"
+			app:subtitleTextAppearance="@style/TextAppearance.Material3.BodySmall"
+			app:titleTextAppearance="@style/TextAppearance.Material3.TitleMedium"
 			tools:menu="@menu/opt_reader" />
 
 	</com.google.android.material.appbar.AppBarLayout>
@@ -142,19 +145,5 @@
 			android:textAppearance="?attr/textAppearanceTitleMedium" />
 
 	</LinearLayout>
-
-	<org.koitharu.kotatsu.reader.ui.erase.EraseOverlayView
-		android:id="@+id/eraseOverlay"
-		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:elevation="1001dp"
-		android:visibility="gone" />
-
-	<org.koitharu.kotatsu.reader.ui.erase.EraseTutorialView
-		android:id="@+id/eraseTutorial"
-		android:layout_width="match_parent"
-		android:layout_height="match_parent"
-		android:elevation="1002dp"
-		android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
