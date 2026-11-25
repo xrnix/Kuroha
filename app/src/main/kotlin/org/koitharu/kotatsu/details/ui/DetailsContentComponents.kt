@@ -377,8 +377,7 @@ internal fun TagsSection(tags: List<ChipsView.ChipModel>, accent: Color, onTagCl
 internal fun TagToggleChip(text: String, accent: Color, expanded: Boolean, onClick: () -> Unit) {
 	Surface(
 		shape = RoundedCornerShape(15.dp),
-		color = Color.Transparent,
-		border = BorderStroke(1.dp, accent.copy(alpha = 0.6f)),
+		color = MaterialTheme.colorScheme.surfaceContainerHigh,
 		onClick = onClick,
 	) {
 		Row(

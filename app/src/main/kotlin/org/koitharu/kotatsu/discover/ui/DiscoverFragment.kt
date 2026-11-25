@@ -378,7 +378,6 @@ private fun DiscoverFilterBar(
 		Surface(
 			shape = CircleShape,
 			color = cs.surfaceContainerHigh,
-			border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.5f)),
 		) {
 			Row(
 				modifier = Modifier.padding(3.dp),
@@ -429,10 +428,6 @@ private fun DiscoverFilterBar(
 				shape = CircleShape,
 				color = if (hasActiveFilters) cs.primaryContainer else cs.surfaceContainerHigh,
 				contentColor = if (hasActiveFilters) cs.onPrimaryContainer else cs.onSurface,
-				border = BorderStroke(
-					1.dp,
-					if (hasActiveFilters) cs.primary.copy(alpha = 0.4f) else cs.outlineVariant.copy(alpha = 0.5f),
-				),
 				modifier = Modifier
 					.clip(CircleShape)
 					.clickable {
@@ -638,10 +633,6 @@ private fun FilterPill(
 		shape = RoundedCornerShape(14.dp),
 		color = if (selected) cs.primaryContainer else cs.surfaceContainerHigh,
 		contentColor = if (selected) cs.onPrimaryContainer else cs.onSurface,
-		border = BorderStroke(
-			1.dp,
-			if (selected) cs.primary.copy(alpha = 0.45f) else cs.outlineVariant.copy(alpha = 0.45f),
-		),
 		modifier = Modifier
 			.clip(RoundedCornerShape(14.dp))
 			.clickable(onClick = onClick),

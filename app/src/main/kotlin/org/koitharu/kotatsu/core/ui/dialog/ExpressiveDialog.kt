@@ -216,8 +216,6 @@ fun ExpressiveDialogCard(
 			// Concentric with the round corner button: its radius plus the card padding.
 			shape = RoundedCornerShape(CornerButtonSize / 2 + CardPadding),
 			color = colors.surfaceContainer,
-			// Same outline as the floating nav bar
-			border = BorderStroke(1.dp, colors.outlineVariant),
 			modifier = Modifier
 				.fillMaxWidth()
 				.widthIn(max = DialogMaxWidth)

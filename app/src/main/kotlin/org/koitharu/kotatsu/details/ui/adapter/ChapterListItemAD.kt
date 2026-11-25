@@ -4,7 +4,6 @@ import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
@@ -40,8 +39,7 @@ fun chapterListItemAD(
 				val accent = accentColorProvider()
 					?: context.getThemeColor(androidx.appcompat.R.attr.colorPrimary)
 				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHighest))
-				binding.root.strokeColor = ColorUtils.setAlphaComponent(accent, (0.35f * 255).toInt())
-				binding.root.strokeWidth = (1.5f * density).toInt()
+				binding.root.strokeWidth = 0
 				binding.root.cardElevation = 2f * density
 				binding.viewCurrentIndicator.background = GradientDrawable().apply {
 					shape = GradientDrawable.RECTANGLE

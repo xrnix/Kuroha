@@ -968,8 +968,7 @@ fun FloatingNavBar(
 					Spacer(
 						modifier = Modifier
 							.matchParentSize()
-							.background(color = barColor, shape = BarShape)
-							.border(width = 1.dp, color = cs.outlineVariant, shape = BarShape),
+							.background(color = barColor, shape = BarShape),
 					)
 					Row(
 						modifier = Modifier
@@ -1209,7 +1208,6 @@ private fun FloatingContinueButton(
 			shape = RoundedCornerShape(dimensionResource(R.dimen.corner_large)),
 			color = container,
 			contentColor = content,
-			border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
 			modifier = Modifier
 				.requiredSize(56.dp)
 				.semantics { contentDescription = label },
