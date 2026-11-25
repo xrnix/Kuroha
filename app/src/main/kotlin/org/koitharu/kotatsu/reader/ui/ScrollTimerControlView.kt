@@ -25,7 +25,7 @@ import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.parentView
 import org.koitharu.kotatsu.databinding.ViewScrollTimerBinding
-import java.util.concurrent.TimeUnit
+import java.text.NumberFormat
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -44,7 +44,7 @@ class ScrollTimerControlView @JvmOverloads constructor(
 	private val binding = ViewScrollTimerBinding.inflate(LayoutInflater.from(context), this)
 
 	private var scrollTimer: ScrollTimer? = null
-	private var labelPattern = context.getString(R.string.speed_value)
+	private val percentFormat = NumberFormat.getPercentInstance()
 	private var readerMode: ReaderMode = ReaderMode.STANDARD
 
 	init {
@@ -54,7 +54,6 @@ class ScrollTimerControlView @JvmOverloads constructor(
 		binding.sliderTimer.setLabelFormatter(this)
 		binding.buttonClose.setOnClickListener(this)
 		binding.buttonFab.isGone = resources.getBoolean(R.bool.is_tablet)
-		setPadding(0, 0, 0, context.resources.getDimensionPixelOffset(R.dimen.margin_normal))
 	}
 
 	fun attach(timer: ScrollTimer, lifecycleOwner: LifecycleOwner) {
@@ -101,8 +100,8 @@ class ScrollTimerControlView @JvmOverloads constructor(
 	override fun getFormattedValue(value: Float): String {
 		val valueFrom = binding.sliderTimer.valueFrom
 		val valueTo = binding.sliderTimer.valueTo
-		val percent = (value - valueFrom) / (valueTo - valueFrom)
-		return labelPattern.format(0.1 + percent * 10) // just something to display
+		val percent = ((value - valueFrom) / (valueTo - valueFrom)).coerceIn(0f, 1f)
+		return percentFormat.format(percent)
 	}
 
 	override fun onValueChange(
@@ -150,13 +149,14 @@ class ScrollTimerControlView @JvmOverloads constructor(
 	}
 
 	private fun updateDescription() {
+		binding.textViewValue.text = getFormattedValue(binding.sliderTimer.value)
 		val timePerPage = scrollTimer?.pageSwitchDelay ?: 0L
 		if (timePerPage <= 0L || readerMode == ReaderMode.WEBTOON) {
 			binding.textViewDescription.isVisible = false
 		} else {
 			binding.textViewDescription.text = context.getString(
 				R.string.page_switch_timer,
-				TimeUnit.MILLISECONDS.toSeconds((scrollTimer ?: return).pageSwitchDelay),
+				(timePerPage / 1000L),
 			)
 			binding.textViewDescription.isVisible = true
 		}

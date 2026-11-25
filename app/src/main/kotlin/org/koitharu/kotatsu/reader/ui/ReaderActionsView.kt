@@ -2,6 +2,8 @@ package org.koitharu.kotatsu.reader.ui
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.database.ContentObserver
 import android.provider.Settings
 import android.util.AttributeSet
@@ -14,12 +16,16 @@ import android.widget.LinearLayout
 import androidx.annotation.AttrRes
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderControl
+import org.koitharu.kotatsu.core.util.ext.HapticEffect
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
+import org.koitharu.kotatsu.core.util.ext.hapticFeedback
 import org.koitharu.kotatsu.core.util.ext.hasVisibleChildren
 import org.koitharu.kotatsu.core.util.ext.isRtl
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -27,9 +33,11 @@ import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.databinding.LayoutReaderActionsBinding
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
+import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_BOOKMARKS
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_PAGES
 import org.koitharu.kotatsu.reader.ui.ReaderControlDelegate.OnInteractionListener
 import javax.inject.Inject
+import androidx.appcompat.R as appcompatR
 import com.google.android.material.R as materialR
 
 @AndroidEntryPoint
@@ -56,6 +64,8 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 	private var isSliderChanged = false
 	private var isSliderTracking = false
+	private var lastSliderStep = Float.NaN
+	private var scrubPreview: PageScrubPreview? = null
 
 	var isSliderEnabled: Boolean
 		get() = binding.slider.isEnabled
@@ -64,17 +74,20 @@ class ReaderActionsView @JvmOverloads constructor(
 			binding.slider.setThumbVisible(value)
 		}
 
-	var isNextEnabled: Boolean
-		get() = binding.buttonNext.isEnabled
+	var isNextEnabled: Boolean = true
 		set(value) {
-			binding.buttonNext.isEnabled = value
+			field = value
+			updateChapterButtons()
 		}
 
-	var isPrevEnabled: Boolean
-		get() = binding.buttonPrev.isEnabled
+	var isPrevEnabled: Boolean = true
 		set(value) {
-			binding.buttonPrev.isEnabled = value
+			field = value
+			updateChapterButtons()
 		}
+
+	// Right-to-left reading: the left arrow goes to the next chapter
+	private var isChapterButtonsSwapped = false
 
 	var isBookmarkAdded: Boolean = false
 		set(value) {
@@ -85,6 +98,22 @@ class ReaderActionsView @JvmOverloads constructor(
 		}
 
 	var listener: OnInteractionListener? = null
+
+	/**
+	 * Whether the current chapter can back the slider with page thumbnails. When it can, the
+	 * thumbnail carries the page number itself, so Material's floating value label would only be a
+	 * second chip fighting for the same spot above the thumb.
+	 */
+	var isScrubPreviewEnabled: Boolean = false
+		set(value) {
+			if (field != value) {
+				field = value
+				if (!value) {
+					scrubPreview?.dismiss()
+				}
+				updateSliderLabel()
+			}
+		}
 
 	init {
 		orientation = HORIZONTAL
@@ -114,18 +143,28 @@ class ReaderActionsView @JvmOverloads constructor(
 		)
 	}
 
+	override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+		super.onWindowFocusChanged(hasWindowFocus)
+		if (!hasWindowFocus) {
+			// A drag interrupted by a call/notification never gets its onStopTrackingTouch.
+			scrubPreview?.dismiss()
+		}
+	}
+
 	override fun onDetachedFromWindow() {
 		settings.unsubscribe(this)
 		context.contentResolver.unregisterContentObserver(rotationObserver)
+		scrubPreview?.dismiss()
 		super.onDetachedFromWindow()
 	}
 
 	override fun onClick(v: View) {
+		v.hapticFeedback(HapticEffect.LIGHT_CLICK)
 		when (v.id) {
-			R.id.button_prev -> listener?.switchChapterBy(-1)
-			R.id.button_next -> listener?.switchChapterBy(1)
+			R.id.button_prev -> listener?.switchChapterBy(if (isChapterButtonsSwapped) 1 else -1)
+			R.id.button_next -> listener?.switchChapterBy(if (isChapterButtonsSwapped) -1 else 1)
 			R.id.button_save -> listener?.onSavePageClick()
-			R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = false)
+			R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = true)
 			R.id.button_pages_thumbs -> AppRouter.from(this)?.showChapterPagesSheet()
 			R.id.button_comments -> listener?.onCommentsClick()
 			R.id.button_screen_rotation -> listener?.toggleScreenOrientation()
@@ -136,9 +175,9 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onLongClick(v: View): Boolean = when (v.id) {
 		R.id.button_bookmark -> AppRouter.from(this)
-			?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS)
+			?.showChapterPagesSheet(TAB_BOOKMARKS)
 
-		R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = true)
+		R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = false)
 		R.id.button_options -> AppRouter.from(this)?.openReaderSettings()
 		else -> null
 	} != null
@@ -147,6 +186,11 @@ class ReaderActionsView @JvmOverloads constructor(
 		if (fromUser) {
 			if (isSliderTracking) {
 				isSliderChanged = true
+				if (value != lastSliderStep) {
+					lastSliderStep = value
+					slider.hapticFeedback(HapticEffect.LIGHT_TICK)
+				}
+				showScrubPreview(value.toInt())
 			} else {
 				listener?.switchPageTo(value.toInt())
 			}
@@ -157,13 +201,33 @@ class ReaderActionsView @JvmOverloads constructor(
 		if (!isSliderTracking) {
 			isSliderChanged = false
 			isSliderTracking = true
+			lastSliderStep = slider.value
 		}
+		showScrubPreview(slider.value.toInt())
 	}
 
 	override fun onStopTrackingTouch(slider: Slider) {
 		isSliderTracking = false
+		scrubPreview?.hide()
 		if (isSliderChanged) {
 			listener?.switchPageTo(slider.value.toInt())
+		}
+	}
+
+	private fun showScrubPreview(index: Int) {
+		if (!isScrubPreviewEnabled) {
+			return
+		}
+		val page = listener?.getPageAt(index) ?: return
+		val preview = scrubPreview ?: PageScrubPreview(binding.slider).also { scrubPreview = it }
+		preview.show(page)
+	}
+
+	private fun updateSliderLabel() {
+		binding.slider.labelBehavior = if (isScrubPreviewEnabled) {
+			LabelFormatter.LABEL_GONE
+		} else {
+			LabelFormatter.LABEL_FLOATING
 		}
 	}
 
@@ -183,16 +247,31 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	fun setSliderReversed(reversed: Boolean) {
 		binding.slider.isRtl = reversed != isRtl
+		if (isChapterButtonsSwapped != reversed) {
+			isChapterButtonsSwapped = reversed
+			updateChapterButtons()
+		}
+	}
+
+	private fun updateChapterButtons() {
+		val swapped = isChapterButtonsSwapped
+		binding.buttonPrev.isEnabled = if (swapped) isNextEnabled else isPrevEnabled
+		binding.buttonNext.isEnabled = if (swapped) isPrevEnabled else isNextEnabled
+		binding.buttonPrev.setContentDescriptionAndTooltip(if (swapped) R.string.next_chapter else R.string.prev_chapter)
+		binding.buttonNext.setContentDescriptionAndTooltip(if (swapped) R.string.prev_chapter else R.string.next_chapter)
 	}
 
 	fun setTimerActive(isActive: Boolean) {
-		binding.buttonTimer.setIconResource(
-			if (isActive) R.drawable.ic_timer_run else R.drawable.ic_timer,
+		binding.buttonTimer.iconTint = ColorStateList.valueOf(
+			context.getThemeColor(
+				if (isActive) appcompatR.attr.colorPrimary else materialR.attr.colorOnSurfaceVariant,
+			),
 		)
 	}
 
 	private fun updateControlsVisibility() {
 		val controls = settings.readerControls
+		val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 		binding.buttonPrev.isVisible = ReaderControl.PREV_CHAPTER in controls
 		binding.buttonNext.isVisible = ReaderControl.NEXT_CHAPTER in controls
 		binding.buttonPagesThumbs.isVisible = ReaderControl.PAGES_SHEET in controls
@@ -201,18 +280,45 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.buttonSave.isVisible = ReaderControl.SAVE_PAGE in controls
 		binding.buttonTimer.isVisible = ReaderControl.TIMER in controls
 		binding.buttonBookmark.isVisible = ReaderControl.BOOKMARK in controls
+		binding.buttonOptions.isVisible = isLandscape
 		binding.slider.isVisible = ReaderControl.SLIDER in controls
+		for (control in controls) {
+			bringChildToFront(control.view())
+		}
+		bringChildToFront(binding.buttonOptions.slot())
 		adjustLayoutParams()
 	}
 
+	private fun ReaderControl.view(): View = when (this) {
+		ReaderControl.PREV_CHAPTER -> binding.buttonPrev.slot()
+		ReaderControl.NEXT_CHAPTER -> binding.buttonNext.slot()
+		ReaderControl.SLIDER -> binding.slider
+		ReaderControl.PAGES_SHEET -> binding.buttonPagesThumbs.slot()
+		ReaderControl.COMMENTS -> binding.buttonComments.slot()
+		ReaderControl.SCREEN_ROTATION -> binding.buttonScreenRotation.slot()
+		ReaderControl.SAVE_PAGE -> binding.buttonSave.slot()
+		ReaderControl.TIMER -> binding.buttonTimer.slot()
+		ReaderControl.BOOKMARK -> binding.buttonBookmark.slot()
+	}
+
+	private fun View.slot(): View = parent as View
+
 	private fun updatePagesSheetButton() {
-		val isPagesMode = settings.defaultDetailsTab == TAB_PAGES
 		val button = binding.buttonPagesThumbs
+		val tab = settings.defaultDetailsTab
 		button.setIconResource(
-			if (isPagesMode) R.drawable.ic_grid else R.drawable.ic_list,
+			when (tab) {
+				TAB_PAGES -> R.drawable.ic_grid
+				TAB_BOOKMARKS -> R.drawable.ic_bookmark
+				else -> R.drawable.ic_list
+			},
 		)
 		button.setContentDescriptionAndTooltip(
-			if (isPagesMode) R.string.pages else R.string.chapters,
+			when (tab) {
+				TAB_PAGES -> R.string.pages
+				TAB_BOOKMARKS -> R.string.bookmarks
+				else -> R.string.chapters
+			},
 		)
 	}
 

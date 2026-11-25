@@ -152,5 +152,7 @@ class ReaderControlDelegate(
 		fun toggleScreenOrientation()
 
 		fun isReaderResumed(): Boolean
+
+		fun getPageAt(index: Int): org.koitharu.kotatsu.reader.ui.pager.ReaderPage? = null
 	}
 }

@@ -13,11 +13,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.annotation.MainThread
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -137,6 +139,8 @@ class ReaderActivity :
     private val hideEInkFlashRunnable = Runnable { einkFlashView.isVisible = false }
     private lateinit var einkFlashView: View
     private var eInkFlashCounter = 0
+    private var dockedToolbarHeight = 0
+    private var isPanelOffsetAnimating = false
 
     // Tracks whether the foldable device is in an unfolded state (half-opened or flat)
     private var isFoldUnfolded: Boolean = false
@@ -160,7 +164,7 @@ class ReaderActivity :
         offerEraseTutorial()
         viewBinding.zoomControl.listener = this
         viewBinding.actionsView.listener = this
-        viewBinding.buttonTimer?.setOnClickListener(this)
+        viewBinding.buttonTimerFab?.setOnClickListener(this)
         idlingDetector.bindToLifecycle(this)
         screenOrientationHelper.applySettings()
         viewModel.isBookmarkAdded.observe(this) { viewBinding.actionsView.isBookmarkAdded = it }
@@ -225,7 +229,13 @@ class ReaderActivity :
         viewModel.isZoomControlsEnabled.observe(this) {
             viewBinding.zoomControl.isVisible = it
         }
-        addMenuProvider(ReaderMenuProvider(viewModel) { router.openHiddenImages() })
+        addMenuProvider(
+            ReaderMenuProvider(
+                onOpenMenu = ::openMenu,
+                isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+                onHiddenImages = { router.openHiddenImages() },
+            ),
+        )
 
         observeWindowLayout()
 
@@ -282,7 +292,7 @@ class ReaderActivity :
 
     override fun onClick(v: View) {
         when (v.id) {
-            R.id.button_timer -> onScrollTimerClick(isLongClick = false)
+            R.id.button_timer_fab -> onScrollTimerClick(isLongClick = false)
         }
     }
 
@@ -463,6 +473,7 @@ class ReaderActivity :
             viewBinding.infoBar.isGone = isUiVisible || (!viewModel.isInfoBarEnabled.value)
             viewBinding.infoBar.isTimeVisible = isFullscreen
             updateScrollTimerButton()
+            updateTimerPanelOffset(animate = true)
             systemUiController.setSystemUiVisible(isUiVisible || !isFullscreen)
             viewBinding.root.requestApplyInsets()
         }
@@ -471,20 +482,36 @@ class ReaderActivity :
     override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
         gestureInsets = insets.getInsets(WindowInsetsCompat.Type.systemGestures())
         val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        val tappableInsets = insets.getInsets(WindowInsetsCompat.Type.tappableElement())
         viewBinding.toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
             topMargin = systemBars.top
             rightMargin = systemBars.right
             leftMargin = systemBars.left
         }
-        if (viewBinding.toolbarDocked != null) {
-            viewBinding.actionsView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = systemBars.bottom
-                rightMargin = systemBars.right
-                leftMargin = systemBars.left
+        viewBinding.toolbarDocked?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            val dockedMargin = resources.getDimensionPixelSize(R.dimen.screen_padding)
+            bottomMargin = tappableInsets.bottom + dockedMargin
+            rightMargin = systemBars.right + dockedMargin
+            leftMargin = systemBars.left + dockedMargin
+        } ?: viewBinding.actionsView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            bottomMargin = tappableInsets.bottom
+            rightMargin = systemBars.right
+            leftMargin = systemBars.left
+        }
+        viewBinding.toolbarDocked?.let { docked ->
+            dockedToolbarHeight = maxOf(dockedToolbarHeight, docked.height)
+            val panelMargin = tappableInsets.bottom + resources.getDimensionPixelSize(R.dimen.screen_padding)
+            viewBinding.timerControl.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                if (bottomMargin != panelMargin) {
+                    bottomMargin = panelMargin
+                }
             }
+            updateTimerPanelOffset(animate = false)
         }
         viewBinding.infoBar.updatePadding(
-            top = systemBars.top,
+            top = ViewCompat.getRootWindowInsets(v)
+                ?.getInsets(WindowInsetsCompat.Type.systemBars())?.top
+                ?: systemBars.top,
         )
         val innerInsets = Insets.of(
             systemBars.left,
@@ -495,6 +522,12 @@ class ReaderActivity :
         return WindowInsetsCompat.Builder(insets)
             .setInsets(WindowInsetsCompat.Type.systemBars(), innerInsets)
             .build()
+    }
+
+    override fun getPageAt(index: Int): ReaderPage? {
+        val page = viewModel.getCurrentChapterPages()?.getOrNull(index) ?: return null
+        val chapterId = viewModel.getCurrentState()?.chapterId ?: return null
+        return ReaderPage(page, index, chapterId)
     }
 
     override fun switchPageBy(delta: Int) {
@@ -653,8 +686,11 @@ class ReaderActivity :
             supportActionBar?.subtitle = null
             viewBinding.actionsView.setSliderValue(0, 1)
             viewBinding.actionsView.isSliderEnabled = false
+            viewBinding.actionsView.isScrubPreviewEnabled = false
             return
         }
+        viewBinding.actionsView.isScrubPreviewEnabled = uiState.isSliderAvailable() &&
+            getPageAt(uiState.currentPage) != null
         val chapterTitle = uiState.getChapterTitle(resources)
         supportActionBar?.subtitle = when {
             uiState.incognito -> getString(R.string.incognito_mode)
@@ -724,8 +760,37 @@ class ReaderActivity :
         einkFlashView.postDelayed(hideEInkFlashRunnable, settings.eInkFlashDuration.toLong())
     }
 
+    private fun updateTimerPanelOffset(animate: Boolean) {
+        if (viewBinding.toolbarDocked == null) return
+        val panels = listOfNotNull<View>(
+            viewBinding.timerControl,
+            viewBinding.buttonTimerFab,
+        )
+        if (!animate && isPanelOffsetAnimating) return
+        val target = if (viewBinding.appbarTop.isVisible) {
+            -(dockedToolbarHeight + resources.getDimensionPixelSize(R.dimen.screen_padding)).toFloat()
+        } else {
+            0f
+        }
+        panels.forEach { it.animate().cancel() }
+        if (animate && isAnimationsEnabled) {
+            isPanelOffsetAnimating = true
+            panels.forEach { panel ->
+                panel.animate()
+                    .translationY(target)
+                    .setDuration(PANEL_SLIDE_DURATION)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .withEndAction { isPanelOffsetAnimating = false }
+                    .start()
+            }
+        } else {
+            isPanelOffsetAnimating = false
+            panels.forEach { it.translationY = target }
+        }
+    }
+
     private fun updateScrollTimerButton() {
-        val button = viewBinding.buttonTimer ?: return
+        val button = viewBinding.buttonTimerFab ?: return
         val isButtonVisible = scrollTimer.isActive.value
             && settings.isReaderAutoscrollFabVisible
             && !viewBinding.appbarTop.isVisible
@@ -784,5 +849,7 @@ class ReaderActivity :
         private const val TOAST_DURATION = 2000L
 
         private const val ERASE_TUTORIAL_DELAY_MS = 1_200L
+
+        private const val PANEL_SLIDE_DURATION = 250L
     }
 }
