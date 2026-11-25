@@ -1348,30 +1348,32 @@ private fun NavIcon(
 	AndroidView(
 		modifier = modifier,
 		factory = { ctx ->
-			AppCompatImageView(ctx).apply {
+			ImageView(ctx).apply {
 				scaleType = ImageView.ScaleType.FIT_CENTER
-				setImageDrawable(AppCompatResources.getDrawable(ctx, resId))
-				val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
-				setImageState(targetState, false)
+				setImageResource(resId)
+				// Prime initial state without a transition. Setting state twice (empty,
+				// then the real state) suppresses the first-paint morph that would
+				// otherwise fire on inflate.
+				setImageState(IntArray(0), false)
 				jumpDrawablesToCurrentState()
-				tag = resId
 			}
 		},
 		update = { iv ->
-			val resourceChanged = iv.tag != resId
+			val targetResId = when {
+				resId == R.drawable.ic_explore_selector && selected -> R.drawable.ic_explore_checked
+				resId == R.drawable.ic_explore_selector -> R.drawable.ic_explore_normal
+				else -> resId
+			}
+			val resourceChanged = iv.tag != targetResId
 			if (resourceChanged) {
-				iv.setImageDrawable(AppCompatResources.getDrawable(iv.context, resId))
-				iv.tag = resId
-				val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
+				iv.setImageResource(targetResId)
+				iv.tag = targetResId
+			}
+			val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
+			if (resourceChanged || iv.isSelected != selected) {
 				iv.isSelected = selected
 				iv.isActivated = selected
 				iv.setImageState(targetState, false)
-				iv.jumpDrawablesToCurrentState()
-			} else if (iv.isSelected != selected) {
-				iv.isSelected = selected
-				iv.isActivated = selected
-				val targetState = if (selected) SELECTOR_STATE_CHECKED else SELECTOR_STATE_UNCHECKED
-				iv.setImageState(targetState, true)
 			}
 			// update re-runs on its own whenever tint() changes (AndroidView observes its reads).
 			// The color filter overrides any drawable tint, so it alone decides the icon color.

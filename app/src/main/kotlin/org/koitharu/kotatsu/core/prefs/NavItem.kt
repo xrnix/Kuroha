@@ -14,7 +14,7 @@ enum class NavItem(
 ) {
 
 	HISTORY(R.id.nav_history, R.string.history, R.drawable.ic_history_selector),
-	FAVORITES(R.id.nav_favorites, R.string.library, R.drawable.ic_library_selector),
+	FAVORITES(R.id.nav_favorites, R.string.library, R.drawable.ic_favourites_selector),
 	LOCAL(R.id.nav_local, R.string.on_device, R.drawable.ic_storage_selector),
 	EXPLORE(R.id.nav_explore, R.string.explore, R.drawable.ic_explore_selector),
 	SOURCES(R.id.nav_sources, R.string.by_source, R.drawable.ic_sources_selector),

@@ -26,10 +26,10 @@
 				android:scaleX="0.6"
 				android:scaleY="0.6">
 				<group
-					android:scaleX="0.7"
-					android:scaleY="0.7"
-					android:translateX="450"
-					android:translateY="450">
+					android:scaleX="0.47"
+					android:scaleY="0.47"
+					android:translateX="533.28"
+					android:translateY="543.52">
 					<group
 						android:name="d"
 						android:translateX="-195.84"
@@ -38,7 +38,7 @@
 							android:name="d_path"
 							android:fillAlpha="0"
 							android:fillColor="?attr/splashLogoColor"
-							android:pathData="M222.2,190.0 L393.6,190.0 L393.6,470.2 L222.2,430.1 Z" />
+							android:pathData="M0,6.39L533.51,0l194.31,369.82-201.05,361.61-516.66,5.48L0,6.39ZM448.14,355.21l-170.72-180.8-21.34,366.17,192.06-185.37Z" />
 					</group>
 					<group
 						android:name="s"
@@ -48,7 +48,7 @@
 							android:name="s_path"
 							android:fillAlpha="0"
 							android:fillColor="?attr/splashLogoColor"
-							android:pathData="M408.9,490.3 L611.8,537.7 L785.7,810.0 L584.5,810.0 L448.3,583.3 L408.9,628.9 Z M415.5,765.0 L451.4,765.0 L455.1,768.1 L455.6,805.7 L452.6,809.4 L415.5,810.0 L411.3,807.0 L410.6,769.3 Z" />
+							android:pathData="M518.67,1091.38l-27.45-283.16,208.12-8.17,22.87,106.19,83.48-4.54,9.15-88.94-317.9-83.5,29.73-357.59,568.34-11.8,40.02,313.11-209.27,11.8-35.45-132.51h-77.76l-6.86,120.71,316.76,84.4-27.45,331.27-576.34,2.72Z" />
 					</group>
 					<group
 						android:name="bl"
@@ -58,7 +58,7 @@
 							android:name="bl_path"
 							android:fillAlpha="0"
 							android:fillColor="?attr/splashLogoColor"
-							android:pathData="M215.0,444.0 L393.6,486.6 L393.6,810.0 L214.3,810.0 Z" />
+							android:pathData="M8.86,768.55l441.62,-13.27l36.01,336.09l-478.26,-15.78l0.63,-307.04z" />
 					</group>
 					<group
 						android:name="tr"
@@ -68,7 +68,7 @@
 							android:name="tr_path"
 							android:fillAlpha="0"
 							android:fillColor="?attr/splashLogoColor"
-							android:pathData="M585.7,190.0 L781.4,190.0 L575.4,456.8 L614.3,522.5 L408.9,474.5 L408.9,423.4 Z" />
+							android:pathData="M586.77,0l140.45,326.4l365.58,11.16l19.69,-337.35l-525.72,-0.21z" />
 					</group>
 				</group>
 			</group>
