@@ -13,11 +13,13 @@ fun emptyHintAD(
 ) {
 
 	binding.buttonRetry.setOnClickListener { listener.onEmptyActionClick() }
+	binding.buttonSecondary.setOnClickListener { listener.onEmptySecondaryActionClick() }
 
 	bind {
 		binding.icon.setImageAsync(item.icon)
 		binding.textPrimary.setText(item.textPrimary)
 		binding.textSecondary.setTextAndVisible(item.textSecondary)
 		binding.buttonRetry.setTextAndVisible(item.actionStringRes)
+		binding.buttonSecondary.setTextAndVisible(item.secondaryActionStringRes)
 	}
 }

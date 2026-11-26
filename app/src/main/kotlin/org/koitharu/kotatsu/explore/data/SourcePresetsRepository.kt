@@ -49,6 +49,11 @@ class SourcePresetsRepository @Inject constructor(
 		dao.update(id, title, languages.joinToString(","))
 	}
 
+	suspend fun updatePreset(id: Long, title: String, languages: Set<String>, sources: Set<String>) {
+		dao.update(id, title, languages.joinToString(","))
+		dao.updateSources(id, sources.joinToString(","))
+	}
+
 	suspend fun updatePresetSources(id: Long, sources: Set<String>) {
 		dao.updateSources(id, sources.joinToString(","))
 	}

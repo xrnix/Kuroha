@@ -19,15 +19,29 @@ fun listHeaderAD(
 		binding.buttonMore.setOnClickListener {
 			listener.onListHeaderClick(item, it)
 		}
+		binding.buttonSplitLeft.setOnClickListener {
+			listener.onListHeaderClick(item, it)
+		}
+		binding.buttonSplitRight.setOnClickListener {
+			listener.onListHeaderSecondaryClick(item, it)
+		}
 	}
 
 	bind {
 		binding.textViewTitle.text = item.getText(context)
-		if (item.buttonTextRes == 0) {
+		if (item.secondaryButtonTextRes != 0) {
+			binding.buttonMore.isVisible = false
+			binding.buttonMore.clearBadge(badge)
+			binding.splitPill.isVisible = true
+			binding.buttonSplitLeft.setText(item.buttonTextRes)
+			binding.buttonSplitRight.setText(item.secondaryButtonTextRes)
+		} else if (item.buttonTextRes == 0) {
+			binding.splitPill.isVisible = false
 			binding.buttonMore.isInvisible = true
 			binding.buttonMore.text = null
 			binding.buttonMore.clearBadge(badge)
 		} else {
+			binding.splitPill.isVisible = false
 			binding.buttonMore.setText(item.buttonTextRes)
 			binding.buttonMore.isVisible = true
 			badge = itemView.bindBadge(badge, item.badge)

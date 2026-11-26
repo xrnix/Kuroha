@@ -881,6 +881,10 @@
 			android:noHistory="true"
 			android:windowSoftInputMode="adjustResize" />
 		<activity
+			android:name="org.koitharu.kotatsu.main.ui.welcome.OnboardingActivity"
+			android:exported="false"
+			android:launchMode="singleTop" />
+		<activity
 			android:name="org.koitharu.kotatsu.settings.protect.ProtectSetupActivity"
 			android:windowSoftInputMode="adjustResize" />
 		<activity
@@ -938,7 +942,7 @@
 			android:targetActivity="org.koitharu.kotatsu.reader.ui.ReaderActivity" />
 		<activity
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.SourcesCatalogActivity"
-			android:label="@string/sources_catalog" />
+			android:label="@string/extensions_catalog" />
 		<activity
 			android:name="org.koitharu.kotatsu.settings.sources.catalog.stores.ExtensionStoresActivity"
 			android:exported="true"

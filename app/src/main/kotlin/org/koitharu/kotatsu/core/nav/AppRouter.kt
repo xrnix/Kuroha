@@ -79,6 +79,7 @@ import org.koitharu.kotatsu.list.ui.config.ListConfigSection
 import org.koitharu.kotatsu.local.ui.ImportDialogFragment
 import org.koitharu.kotatsu.local.ui.info.LocalInfoDialog
 import org.koitharu.kotatsu.main.ui.MainActivity
+import org.koitharu.kotatsu.main.ui.welcome.OnboardingActivity
 import org.koitharu.kotatsu.main.ui.welcome.WelcomeSheet
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
@@ -555,6 +556,8 @@ class AppRouter private constructor(
     fun showWelcomeSheet() {
         WelcomeSheet().showDistinct()
     }
+
+    fun openOnboarding() = startActivity(OnboardingActivity::class.java)
 
     fun showChapterPagesSheet() {
         ChaptersPagesSheet().showDistinct()

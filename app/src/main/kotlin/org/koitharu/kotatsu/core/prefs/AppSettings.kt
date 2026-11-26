@@ -70,11 +70,27 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getString(KEY_THEME, null)?.toIntOrNull()
 			?: AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
 
+	fun setThemeMode(mode: Int) {
+		prefs.edit { putString(KEY_THEME, mode.toString()) }
+	}
+
 	val colorScheme: ColorScheme
 		get() = prefs.getEnumValue(KEY_COLOR_THEME, ColorScheme.default)
 
+	fun setColorSchemeValue(scheme: ColorScheme) {
+		prefs.edit { putEnumValue(KEY_COLOR_THEME, scheme) }
+	}
+
 	val isAmoledTheme: Boolean
 		get() = prefs.getBoolean(KEY_THEME_AMOLED, false)
+
+	fun setAmoledTheme(enabled: Boolean) {
+		prefs.edit { putBoolean(KEY_THEME_AMOLED, enabled) }
+	}
+
+	var isOnboardingCompleted: Boolean
+		get() = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+		set(value) = prefs.edit { putBoolean(KEY_ONBOARDING_COMPLETED, value) }
 
 	var mainNavItems: List<NavItem>
 		get() {
@@ -1127,6 +1143,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_THEME = "theme"
 		const val KEY_COLOR_THEME = "color_theme"
 		const val KEY_THEME_AMOLED = "amoled_theme"
+		const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
 		const val KEY_APP_ICON = "app_icon"
 		const val KEY_PROTECT_APP_TIMEOUT = "protect_app_timeout"
 		const val KEY_HIDE_STATUS_BAR = "hide_status_bar"

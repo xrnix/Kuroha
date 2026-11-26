@@ -8,5 +8,7 @@ interface ListStateHolderListener {
 
 	fun onEmptyActionClick()
 
+	fun onEmptySecondaryActionClick() = Unit
+
 	fun onFooterButtonClick() = Unit
 }

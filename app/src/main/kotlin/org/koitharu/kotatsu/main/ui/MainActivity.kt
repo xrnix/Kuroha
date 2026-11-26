@@ -263,7 +263,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			viewBinding.layoutUpdatePrompt.isVisible =
 				update != null && update.name != settings.dismissedUpdateVersion
 		}
-		viewModel.onFirstStart.observeEvent(this) { router.showWelcomeSheet() }
+		viewModel.onFirstStart.observeEvent(this) { router.openOnboarding() }
 		viewModel.isBottomNavPinned.observe(this, ::setNavbarPinned)
 		searchSuggestionViewModel.isIncognitoModeEnabled.observe(this, this::onIncognitoModeChanged)
 		viewBinding.bottomNav?.addOnLayoutChangeListener(this)

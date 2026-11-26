@@ -11,6 +11,7 @@ data class ListHeader private constructor(
 	@StringRes val buttonTextRes: Int,
 	val payload: Any?,
 	val badge: String?,
+	@StringRes val secondaryButtonTextRes: Int = 0,
 ) : ListModel {
 
 	constructor(
@@ -18,14 +19,16 @@ data class ListHeader private constructor(
 		@StringRes buttonTextRes: Int = 0,
 		payload: Any? = null,
 		badge: String? = null,
-	) : this(textRaw = text, buttonTextRes, payload, badge)
+		@StringRes secondaryButtonTextRes: Int = 0,
+	) : this(textRaw = text, buttonTextRes, payload, badge, secondaryButtonTextRes)
 
 	constructor(
 		@StringRes textRes: Int,
 		@StringRes buttonTextRes: Int = 0,
 		payload: Any? = null,
 		badge: String? = null,
-	) : this(textRaw = textRes, buttonTextRes, payload, badge)
+		@StringRes secondaryButtonTextRes: Int = 0,
+	) : this(textRaw = textRes, buttonTextRes, payload, badge, secondaryButtonTextRes)
 
 	constructor(
 		chapter: MangaChapter,

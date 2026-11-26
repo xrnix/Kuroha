@@ -67,7 +67,7 @@ class MainViewModel @Inject constructor(
 			appUpdateRepository.fetchUpdate()
 		}
 		launchJob(Dispatchers.Default) {
-			if (sourcesRepository.isSetupRequired()) {
+			if (!settings.isOnboardingCompleted && sourcesRepository.isSetupRequired()) {
 				onFirstStart.call(Unit)
 			}
 		}

@@ -79,6 +79,7 @@ class ExploreFragment :
 		with(binding.recyclerView) {
 			adapter = exploreAdapter
 			setHasFixedSize(true)
+			setItemViewCacheSize(20)
 			SpanSizeResolver(this, resources.getDimensionPixelSize(R.dimen.explore_grid_width)).attach()
 			addItemDecoration(TypedListSpacingDecoration(context, false))
 			checkNotNull(sourceSelectionController).attachToRecyclerView(this)
@@ -115,11 +116,13 @@ class ExploreFragment :
 	override fun onListHeaderClick(item: ListHeader, view: View) {
 		if (item.payload == R.id.nav_suggestions) {
 			router.openSuggestions()
-		} else if (viewModel.isAllSourcesEnabled.value) {
-			router.openManageSources()
 		} else {
-			router.openSourcesCatalog()
+			router.openManageSources()
 		}
+	}
+
+	override fun onListHeaderSecondaryClick(item: ListHeader, view: View) {
+		router.openSourcesCatalog()
 	}
 
 	override fun onClick(v: View) {
@@ -175,7 +178,9 @@ class ExploreFragment :
 
 	override fun onRetryClick(error: Throwable) = Unit
 
-	override fun onEmptyActionClick() = router.openSourcesCatalog()
+	override fun onEmptyActionClick() = router.openManageSources()
+
+	override fun onEmptySecondaryActionClick() = router.openSourcesCatalog()
 
 	override fun onSelectionChanged(controller: ListSelectionController, count: Int) {
 		viewBinding?.recyclerView?.invalidateItemDecorations()

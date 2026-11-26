@@ -45,6 +45,19 @@
 			tools:text="@tools:sample/lorem[15]" />
 
 		<Button
+			android:id="@+id/button_secondary"
+			style="?materialButtonTonalStyle"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="@dimen/margin_small"
+			android:layout_marginEnd="@dimen/margin_small"
+			android:visibility="gone"
+			app:layout_constraintEnd_toStartOf="@id/button_retry"
+			app:layout_constraintTop_toBottomOf="@id/textSecondary"
+			tools:text="@string/extensions"
+			tools:visibility="visible" />
+
+		<Button
 			android:id="@+id/button_retry"
 			style="?materialButtonTonalStyle"
 			android:layout_width="wrap_content"

@@ -8,6 +8,7 @@ data class EmptyHint(
 	@StringRes val textPrimary: Int,
 	@StringRes val textSecondary: Int,
 	@StringRes val actionStringRes: Int,
+	@StringRes val secondaryActionStringRes: Int = 0,
 ) : ListModel {
 
 	fun toState() = EmptyState(icon, textPrimary, textSecondary, actionStringRes)

@@ -192,7 +192,8 @@ class ExploreViewModel @Inject constructor(
 	private fun getPresetSources(preset: SourcePreset): List<MangaSourceInfo> {
 		if (preset.sources.isEmpty()) return emptyList()
 		val skipNsfw = settings.isNsfwContentDisabled
-		return sourcesRepository.allMangaSources
+		val allSources = sourcesRepository.allMangaSources + sourcesRepository.getMihonSources()
+		return allSources
 			.filter { it.name in preset.sources && (!skipNsfw || !it.isNsfw()) }
 			.map { MangaSourceInfo(it, isEnabled = true, isPinned = false) }
 	}
@@ -219,7 +220,8 @@ class ExploreViewModel @Inject constructor(
 		if (sources.isNotEmpty()) {
 			result += ListHeader(
 				textRes = R.string.remote_sources,
-				buttonTextRes = if (allSourcesEnabled) R.string.manage else R.string.catalog,
+				buttonTextRes = R.string.sources,
+				secondaryButtonTextRes = R.string.extensions,
 			)
 			// Markers come from the community score, ranked within this user's language. A failure
 			// here just means no markers - it must never cost the source list itself.
@@ -232,7 +234,8 @@ class ExploreViewModel @Inject constructor(
 				icon = R.drawable.ic_empty_common,
 				textPrimary = R.string.no_manga_sources,
 				textSecondary = R.string.no_manga_sources_text,
-				actionStringRes = R.string.catalog,
+				actionStringRes = R.string.sources,
+				secondaryActionStringRes = R.string.extensions,
 			)
 		}
 		return result

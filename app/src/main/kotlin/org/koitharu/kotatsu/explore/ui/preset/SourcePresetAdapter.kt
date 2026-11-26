@@ -20,8 +20,13 @@ class SourcePresetAdapter(
 	var activePresetId: Long = 0L
 		set(value) {
 			if (field != value) {
+				val oldId = field
 				field = value
-				notifyDataSetChanged()
+				currentList.forEachIndexed { index, preset ->
+					if (preset.id == oldId || preset.id == value) {
+						notifyItemChanged(index)
+					}
+				}
 			}
 		}
 
