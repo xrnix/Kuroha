@@ -179,6 +179,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		}
 
 		setSupportActionBar(viewBinding.searchBar)
+		viewBinding.searchBar.textCentered = true
 		viewBinding.searchBar.textView.apply {
 			gravity = android.view.Gravity.CENTER
 			includeFontPadding = false
@@ -187,6 +188,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			TextViewCompat.setCompoundDrawableTintList(this, topBarIconTint)
 			setHintTextColor(topBarIconTint)
 			compoundDrawablePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
+		}
+		viewBinding.searchBar.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+			val container = viewBinding.searchBar.findViewById<View>(
+				com.google.android.material.R.id.open_search_bar_text_view_container
+			)
+			if (container != null && viewBinding.searchBar.height > 0 && viewBinding.searchBar.textView.height > 0) {
+				val idealTop = (viewBinding.searchBar.height - viewBinding.searchBar.textView.height) / 2f
+				viewBinding.searchBar.textView.translationY = idealTop - container.top
+			}
 		}
 
 		viewBinding.statusBarScrim.background = StatusBarScrim.drawable(this)
@@ -637,6 +647,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.searchView.toolbar.addMenuProvider(
 			SearchSuggestionMenuProvider(this, voiceInputLauncher, searchSuggestionViewModel),
 		)
+		viewBinding.searchView.editText.apply {
+			gravity = android.view.Gravity.CENTER_VERTICAL
+			includeFontPadding = false
+		}
 		viewBinding.searchView.editText.addTextChangedListener(listener)
 		viewBinding.recyclerViewSearch.adapter = adapter
 		viewBinding.searchView.editText.setOnEditorActionListener(listener)

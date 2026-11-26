@@ -5,5 +5,8 @@
 	<shape android:shape="rectangle">
 		<corners android:radius="24dp" />
 		<solid android:color="?attr/colorSurfaceContainerHigh" />
+		<padding
+			android:left="8dp"
+			android:right="4dp" />
 	</shape>
 </inset>
