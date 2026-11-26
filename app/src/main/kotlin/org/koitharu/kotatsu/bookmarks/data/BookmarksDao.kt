@@ -18,6 +18,9 @@ abstract class BookmarksDao {
 	@Query("SELECT * FROM bookmarks WHERE page_id = :pageId")
 	abstract suspend fun find(pageId: Long): BookmarkEntity?
 
+	@Query("SELECT * FROM bookmarks WHERE manga_id = :mangaId")
+	abstract suspend fun findAll(mangaId: Long): List<BookmarkEntity>
+
 	@Transaction
 	@Query(
 		"SELECT * FROM manga JOIN bookmarks ON bookmarks.manga_id = manga.manga_id ORDER BY percent LIMIT :limit OFFSET :offset",

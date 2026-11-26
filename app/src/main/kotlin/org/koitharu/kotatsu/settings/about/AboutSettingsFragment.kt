@@ -78,6 +78,7 @@ import org.koitharu.kotatsu.settings.compose.KurohaTheme
 import org.koitharu.kotatsu.settings.compose.SettingsGroup
 import org.koitharu.kotatsu.settings.compose.SettingsScaffold
 import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.developer.DeveloperToolsFragment
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -89,6 +90,24 @@ class AboutSettingsFragment : BaseComposeSettingsFragment(R.string.about) {
 
 	private val viewModel by viewModels<AboutSettingsViewModel>()
 
+	private var pendingLogContent: String? = null
+
+	private val saveLogLauncher = registerForActivityResult(
+		ActivityResultContracts.CreateDocument("text/plain"),
+	) { uri: Uri? ->
+		val content = pendingLogContent ?: return@registerForActivityResult
+		pendingLogContent = null
+		if (uri == null) return@registerForActivityResult
+		try {
+			requireContext().contentResolver.openOutputStream(uri)?.use { output ->
+				output.write(content.toByteArray(Charsets.UTF_8))
+				viewModel.onLogSaved()
+			}
+		} catch (_: Exception) {
+			Snackbar.make(requireView(), R.string.error_occurred, Snackbar.LENGTH_SHORT).show()
+		}
+	}
+
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -99,12 +118,19 @@ class AboutSettingsFragment : BaseComposeSettingsFragment(R.string.about) {
 			KurohaTheme {
 				val isUpdateSupported by viewModel.isUpdateSupported.collectAsState()
 				val isLoading by viewModel.isLoading.collectAsState()
+				val isVerboseLogging by viewModel.isVerboseLogging.collectAsState()
+				val canExportLog by viewModel.canExportLog.collectAsState()
 				AboutScreen(
 					appVersion = BuildConfig.VERSION_NAME,
 					checkUpdatesEnabled = isUpdateSupported && !isLoading,
+					isVerboseLogging = isVerboseLogging,
+					canExportLog = canExportLog,
 					onCheckUpdates = viewModel::checkForUpdates,
 					onChangelog = ::openChangelog,
 					onOpenLink = ::openLink,
+					onVerboseLoggingToggle = viewModel::setVerboseLogging,
+					onExportLog = viewModel::exportLog,
+					onOpenDeveloperTools = ::openDeveloperTools,
 				)
 			}
 		}
@@ -113,11 +139,23 @@ class AboutSettingsFragment : BaseComposeSettingsFragment(R.string.about) {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		viewModel.onUpdateAvailable.observeEvent(viewLifecycleOwner, ::onUpdateAvailable)
+		viewModel.onExportLog.observeEvent(viewLifecycleOwner) { content ->
+			pendingLogContent = content
+			saveLogLauncher.launch("kuroha_log_${System.currentTimeMillis()}.txt")
+		}
 	}
 
 	private fun openChangelog() {
 		(activity as? SettingsActivity)?.openFragment(
 			ChangelogFragment::class.java,
+			null,
+			isFromRoot = false,
+		)
+	}
+
+	private fun openDeveloperTools() {
+		(activity as? SettingsActivity)?.openFragment(
+			DeveloperToolsFragment::class.java,
 			null,
 			isFromRoot = false,
 		)
@@ -147,9 +185,14 @@ class AboutSettingsFragment : BaseComposeSettingsFragment(R.string.about) {
 private fun AboutScreen(
 	appVersion: String,
 	checkUpdatesEnabled: Boolean,
+	isVerboseLogging: Boolean,
+	canExportLog: Boolean,
 	onCheckUpdates: () -> Unit,
 	onChangelog: () -> Unit,
 	onOpenLink: (urlRes: Int, titleRes: Int) -> Unit,
+	onVerboseLoggingToggle: (Boolean) -> Unit,
+	onExportLog: () -> Unit,
+	onOpenDeveloperTools: () -> Unit,
 ) {
 	val ctx = LocalContext.current
 	SettingsScaffold {
@@ -199,6 +242,44 @@ private fun AboutScreen(
 						icon = R.drawable.ic_open_external,
 						shape = pos.shape,
 						onClick = { onOpenLink(R.string.url_github, R.string.source_code) },
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = "Diagnostics") {
+				item { pos ->
+					SwitchSettingsItem(
+						title = "Verbose logging",
+						subtitle = if (isVerboseLogging) {
+							"Recording, even across restarts and crashes. Reproduce the issue now, then turn off or export the log"
+						} else {
+							"Turn on first, then reproduce the issue, then turn off or export a log for the developer"
+						},
+						icon = R.drawable.ic_script,
+						shape = pos.shape,
+						checked = isVerboseLogging,
+						onCheckedChange = onVerboseLoggingToggle,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.export_log),
+						subtitle = stringResource(R.string.export_log_summary),
+						icon = R.drawable.ic_export_log,
+						shape = pos.shape,
+						enabled = canExportLog,
+						onClick = onExportLog,
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.developer_testing_tools),
+						subtitle = stringResource(R.string.developer_testing_tools_summary),
+						icon = R.drawable.ic_timer_run,
+						shape = pos.shape,
+						onClick = onOpenDeveloperTools,
 					)
 				}
 			}

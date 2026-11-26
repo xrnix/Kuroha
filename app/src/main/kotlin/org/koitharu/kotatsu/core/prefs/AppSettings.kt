@@ -383,6 +383,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
 		set(value) = prefs.edit { putBoolean(KEY_INCOGNITO_MODE, value) }
 
+	var isVerboseLoggingEnabled: Boolean
+		get() = prefs.getBoolean(KEY_VERBOSE_LOGGING, false)
+		set(value) = prefs.edit { putBoolean(KEY_VERBOSE_LOGGING, value) }
+
 	val isReaderMultiTaskEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_MULTITASK, false)
 
@@ -1228,6 +1232,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DOH = "doh"
 		const val KEY_EXIT_CONFIRM = "exit_confirm"
 		const val KEY_INCOGNITO_MODE = "incognito"
+		const val KEY_VERBOSE_LOGGING = "verbose_logging"
 		const val KEY_READER_MULTITASK = "reader_multitask"
 		const val KEY_READER_BAR = "reader_bar"
 		const val KEY_READER_BAR_TRANSPARENT = "reader_bar_transparent"

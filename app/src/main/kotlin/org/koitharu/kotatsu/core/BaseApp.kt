@@ -69,6 +69,9 @@ open class BaseApp : Application(), Configuration.Provider {
 	lateinit var parsersUpdater: ParsersUpdater
 
 	@Inject
+	lateinit var appLogger: org.koitharu.kotatsu.core.logs.AppLogger
+
+	@Inject
 	lateinit var localMangaIndexProvider: Provider<LocalMangaIndex>
 
 	@Inject
@@ -88,6 +91,7 @@ open class BaseApp : Application(), Configuration.Provider {
 		}
 		// Before anything gets to ask which sources there are: the answer is in the parsers kept from the last run
 		parsersUpdater.start(this)
+		appLogger.setEnabled(settings.isVerboseLoggingEnabled)
 		AppCompatDelegate.setDefaultNightMode(settings.theme)
 		// TLS 1.3 support for Android < 10
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {

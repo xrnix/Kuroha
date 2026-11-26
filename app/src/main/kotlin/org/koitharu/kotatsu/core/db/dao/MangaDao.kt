@@ -130,4 +130,52 @@ abstract class MangaDao {
 		val known = findSourceName(id)
 		return if (known == null || known == source) this else copy(source = known)
 	}
+
+	@Transaction
+	@Query(
+		"""
+		SELECT * FROM manga
+		WHERE source NOT LIKE 'MIHON\_%' ESCAPE '\'
+			AND source NOT IN ('LOCAL', 'UNKNOWN')
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+				UNION SELECT manga_id FROM bookmarks
+				UNION SELECT manga_id FROM tracks
+				UNION SELECT manga_id FROM scrobblings
+			)
+		""",
+	)
+	abstract suspend fun findLegacyMangaWithUserData(): List<MangaWithTags>
+
+	@Transaction
+	@Query(
+		"""
+		SELECT * FROM manga
+		WHERE source LIKE 'MIHON\_%' ESCAPE '\'
+			AND (url LIKE 'http://%' OR url LIKE 'https://%')
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+				UNION SELECT manga_id FROM bookmarks
+				UNION SELECT manga_id FROM tracks
+				UNION SELECT manga_id FROM scrobblings
+			)
+		""",
+	)
+	abstract suspend fun findMigratedMangaWithAbsoluteUrl(): List<MangaWithTags>
+
+	@Transaction
+	@Query(
+		"""
+		SELECT * FROM manga
+		WHERE source IN (:sources)
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		ORDER BY title COLLATE NOCASE
+		""",
+	)
+	abstract suspend fun findLibraryMangaBySources(sources: Collection<String>): List<MangaWithTags>
 }

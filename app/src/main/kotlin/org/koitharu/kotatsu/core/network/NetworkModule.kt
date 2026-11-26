@@ -87,6 +87,7 @@ interface NetworkModule {
 			if (BuildConfig.DEBUG) {
 				addInterceptor(CurlLoggingInterceptor())
 			}
+			addInterceptor(org.koitharu.kotatsu.core.logs.RecordingHttpLogInterceptor())
 		}.build()
 
 		@Provides

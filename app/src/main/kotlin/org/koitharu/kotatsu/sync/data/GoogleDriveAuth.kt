@@ -37,6 +37,7 @@ class GoogleDriveAuth @Inject constructor(
 	private val api: GoogleDriveApi,
 ) {
 
+	private val appContext = context.applicationContext
 	private val client = Identity.getAuthorizationClient(context)
 
 	/**
@@ -44,12 +45,25 @@ class GoogleDriveAuth @Inject constructor(
 	 * [AuthorizationRequest.Prompt.SELECT_ACCOUNT] forces the account chooser even when a previous
 	 * grant is still active (e.g. after an offline sign-out or with multiple authorized accounts).
 	 */
-	suspend fun authorize(): AuthorizationResult = client.authorize(
-		AuthorizationRequest.builder()
-			.setRequestedScopes(SCOPES)
-			.setPrompt(AuthorizationRequest.Prompt.SELECT_ACCOUNT)
-			.build(),
-	).await()
+	suspend fun authorize(): AuthorizationResult = try {
+		client.authorize(
+			AuthorizationRequest.builder()
+				.setRequestedScopes(SCOPES)
+				.setPrompt(AuthorizationRequest.Prompt.SELECT_ACCOUNT)
+				.build(),
+		).await()
+	} catch (e: ApiException) {
+		if (e.statusCode == CommonStatusCodes.NETWORK_ERROR) {
+			throw IOException(e.message, e)
+		}
+		if (e.statusCode == CommonStatusCodes.DEVELOPER_ERROR || e.statusCode == 28444) {
+			throw IOException(
+				"Google OAuth not configured for ${appContext.packageName} (status ${e.statusCode}). Register this package name and its signing SHA-1 in Google Cloud Console.",
+				e,
+			)
+		}
+		throw e
+	}
 
 	/** Parses the result of the consent screen from [AuthorizationResult.getPendingIntent]. */
 	fun resultFromIntent(data: Intent?): AuthorizationResult = client.getAuthorizationResultFromIntent(data)

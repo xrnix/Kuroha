@@ -95,6 +95,8 @@ abstract class Scrobbler(
 		return entity.toScrobblingInfo()
 	}
 
+	fun remoteStatus(status: ScrobblingStatus): String? = statuses[status]
+
 	abstract suspend fun updateScrobblingInfo(
 		mangaId: Long,
 		@FloatRange(from = 0.0, to = 1.0) rating: Float,
