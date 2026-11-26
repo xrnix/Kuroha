@@ -14,6 +14,8 @@
     <string name="list_mode">List mode</string>
     <string name="settings">Settings</string>
     <string name="remote_sources">Manga sources</string>
+	<string name="sources_and_extensions">Sources &amp; Extensions</string>
+	<string name="extensions_catalog">Extensions catalog</string>
     <string name="loading_">Loading…</string>
     <string name="computing_">Computing…</string>
     <string name="chapter_d_of_d">Chapter %1$d of %2$d</string>
@@ -1446,7 +1448,7 @@ Optional — skip it and you appear as anon.</string>
 	<string name="change_repo">Change store index</string>
 	<string name="remove_repo">Remove store index</string>
 	<string name="no_external_source_installed">No external source found</string>
-	<string name="manage_manga_extensions_from_settings_icon">Install manga or novel extensions from the manage option to start reading</string>
+	<string name="manage_manga_extensions_from_settings_icon">Install manga extensions from the manage option to start reading</string>
 	<string name="store_kind_manga">Manga</string>
 	<string name="store_kind_novel">Novels</string>
 	<string name="explore_tabs">Tabs</string>
@@ -1455,7 +1457,7 @@ Optional — skip it and you appear as anon.</string>
 	<string name="manga_only">Manga only</string>
 	<string name="novels_only">Novels only</string>
 	<string name="store_kind_mixed">Manga &amp; novels</string>
-	<string name="stores_supported_kinds_note">This app supports Mihon manga extensions, Tsundoku novel extensions and LNReader novel plugins. Add a store index url and the type is detected automatically.</string>
+	<string name="stores_supported_kinds_note">This app supports Mihon/Tachiyomi manga extension stores. Add a store index url (index.min.json or index.pb) to browse and install extensions.</string>
 	<string name="no_novel_extension_installed">No novel extension found</string>
 	<string name="reader_settings_summary">Advanced reader options</string>
 	<plurals name="imported_titles">

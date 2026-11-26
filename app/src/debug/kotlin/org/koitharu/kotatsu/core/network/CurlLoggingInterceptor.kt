@@ -5,6 +5,7 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import okio.Buffer
+import org.koitharu.kotatsu.core.logs.AppLogger
 import org.koitharu.kotatsu.core.network.CommonHeaders.ACCEPT_ENCODING
 
 class CurlLoggingInterceptor(
@@ -22,7 +23,9 @@ class CurlLoggingInterceptor(
 	)
 
 	override fun intercept(chain: Interceptor.Chain): Response = chain.proceed(chain.request()).also {
-		logRequest(it.networkResponse?.request ?: it.request)
+		if (AppLogger.isRecording) {
+			logRequest(it.networkResponse?.request ?: it.request)
+		}
 	}
 
 	private fun logRequest(request: Request) {

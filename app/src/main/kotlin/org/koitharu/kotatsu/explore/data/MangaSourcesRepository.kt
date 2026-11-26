@@ -93,6 +93,14 @@ class MangaSourcesRepository @Inject constructor(
 	val allMangaSources: Set<ParserMangaSource>
 		get() = ActiveParsers.workingSources
 
+	fun setDefaultBrowseSortOrder(order: org.koitharu.kotatsu.parsers.model.SortOrder) {
+		settings.defaultBrowseSortOrder = order
+		val manager = mihonExtensionManager ?: return
+		for (source in manager.getMihonMangaSources()) {
+			org.koitharu.kotatsu.core.prefs.SourceSettings(context, source).defaultSortOrder = order
+		}
+	}
+
 	suspend fun getEnabledSources(): List<MangaSource> {
 		assimilateNewSources()
 		val order = settings.sourcesSortOrder

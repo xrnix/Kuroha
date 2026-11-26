@@ -124,8 +124,8 @@ enum class SettingsSection(
 		AppearanceSettingsFragment::class.java,
 	),
 	SOURCES(
-		R.string.remote_sources, R.drawable.ic_manga_source, "sources",
-		intArrayOf(R.string.manage_sources, R.string.sort_order),
+		R.string.sources_and_extensions, R.drawable.ic_manga_source, "sources",
+		intArrayOf(R.string.manage_sources, R.string.extensions_catalog, R.string.sort_order),
 		SourcesSettingsFragment::class.java,
 	),
 	READER(

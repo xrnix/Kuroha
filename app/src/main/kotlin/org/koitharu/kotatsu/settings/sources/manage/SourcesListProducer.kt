@@ -74,7 +74,9 @@ class SourcesListProducer @Inject constructor(
 		val withTip = isReorderAvailable && settings.isTipEnabled(TIP_REORDER)
 		val enabledSet = enabledSources.toSet()
 		if (query.isNotEmpty()) {
-			return enabledSources.mapNotNull {
+			val allSearchable = (enabledSources + repository.getDisabledSources().filter { it.unwrap() is ParserMangaSource })
+				.distinctBy { it.name }
+			return allSearchable.mapNotNull {
 				if (!it.getTitle(context).contains(query, ignoreCase = true)) {
 					return@mapNotNull null
 				}

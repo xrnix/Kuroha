@@ -44,6 +44,9 @@ class AutoFixService : CoroutineIntentService() {
 	@Inject
 	lateinit var coil: ImageLoader
 
+	@Inject
+	lateinit var database: org.koitharu.kotatsu.core.db.MangaDatabase
+
 	private lateinit var notificationManager: NotificationManagerCompat
 
 	override fun onCreate() {
@@ -52,18 +55,36 @@ class AutoFixService : CoroutineIntentService() {
 	}
 
 	override suspend fun IntentJobContext.processIntent(intent: Intent) {
-		val ids = requireNotNull(intent.getLongArrayExtra(DATA_IDS))
 		startForeground(this)
-		for (mangaId in ids) {
-			powerManager.withPartialWakeLock(TAG) {
-				val result = runCatchingCancellable {
-					autoFixUseCase.invoke(mangaId)
-				}
-				if (checkNotificationPermission(CHANNEL_ID)) {
-					val notification = buildNotification(startId, result)
-					notificationManager.notify(TAG, startId, notification)
+		val targets = intent.getStringArrayExtra(DATA_TARGETS)?.asList()
+		val ids = intent.getLongArrayExtra(DATA_IDS) ?: intent.getStringArrayExtra(DATA_SOURCES)
+			?.let { database.getMangaDao().findLibraryMangaIdsBySources(it.asList()).toLongArray() }
+			?: error("No manga or sources supplied")
+		try {
+			currentJob = coroutineContext[kotlinx.coroutines.Job]
+			progress.value = Progress(0, ids.size, 0, 0)
+			for (mangaId in ids) {
+				powerManager.withPartialWakeLock(TAG) {
+					val result = runCatchingCancellable {
+						autoFixUseCase.invoke(mangaId, targets)
+					}
+					progress.value = (progress.value ?: Progress(0, ids.size, 0, 0)).let { previous ->
+						previous.copy(
+							done = previous.done + 1,
+							fixed = previous.fixed + if (result.getOrNull()?.second != null) 1 else 0,
+							failed = previous.failed + if (result.isFailure) 1 else 0,
+						)
+					}
+					if (checkNotificationPermission(CHANNEL_ID)) {
+						val notificationId = mangaId.toInt()
+						val notification = buildNotification(notificationId, result)
+						notificationManager.notify(TAG, notificationId, notification)
+					}
 				}
 			}
+		} finally {
+			currentJob = null
+			progress.value = null
 		}
 	}
 
@@ -183,9 +204,25 @@ class AutoFixService : CoroutineIntentService() {
 		return notification.build()
 	}
 
+	data class Progress(
+		val done: Int,
+		val total: Int,
+		val fixed: Int,
+		val failed: Int,
+	)
+
 	companion object {
 
+		val progress = kotlinx.coroutines.flow.MutableStateFlow<Progress?>(null)
+		private var currentJob: kotlinx.coroutines.Job? = null
+
+		fun cancel() {
+			currentJob?.cancel()
+		}
+
 		private const val DATA_IDS = "ids"
+		private const val DATA_SOURCES = "sources"
+		private const val DATA_TARGETS = "targets"
 		private const val TAG = "auto_fix"
 		private const val CHANNEL_ID = "auto_fix"
 		private const val FOREGROUND_NOTIFICATION_ID = 38
@@ -198,6 +235,20 @@ class AutoFixService : CoroutineIntentService() {
 		} catch (e: Exception) {
 			e.printStackTraceDebug()
 			false
+		}
+
+		fun startForSources(context: Context, sources: Collection<String>, targets: List<String>): Boolean {
+			if (sources.isEmpty() || targets.isEmpty()) return false
+			return try {
+				val intent = Intent(context, AutoFixService::class.java)
+					.putExtra(DATA_SOURCES, sources.toTypedArray())
+					.putExtra(DATA_TARGETS, targets.toTypedArray())
+				ContextCompat.startForegroundService(context, intent)
+				true
+			} catch (e: Exception) {
+				e.printStackTraceDebug()
+				false
+			}
 		}
 	}
 }

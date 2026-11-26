@@ -8,11 +8,18 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 import org.koitharu.kotatsu.core.db.entity.MangaEntity
 import org.koitharu.kotatsu.core.db.entity.MangaTagsEntity
 import org.koitharu.kotatsu.core.db.entity.MangaWithTags
 import org.koitharu.kotatsu.core.db.entity.TagEntity
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
+
+data class LibrarySourceUsage(
+	val source: String,
+	val sourceTitle: String?,
+	val mangaCount: Int,
+)
 
 @Dao
 abstract class MangaDao {
@@ -164,6 +171,34 @@ abstract class MangaDao {
 		""",
 	)
 	abstract suspend fun findMigratedMangaWithAbsoluteUrl(): List<MangaWithTags>
+
+	@Transaction
+	@Query(
+		"""
+		SELECT source, NULL AS sourceTitle, COUNT(*) AS mangaCount
+		FROM manga
+		WHERE source NOT IN ('LOCAL', 'UNKNOWN')
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		GROUP BY source
+		ORDER BY source COLLATE NOCASE
+		""",
+	)
+	abstract fun observeLibrarySourceUsage(): Flow<List<LibrarySourceUsage>>
+
+	@Query(
+		"""
+		SELECT manga_id FROM manga
+		WHERE source IN (:sources)
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		""",
+	)
+	abstract suspend fun findLibraryMangaIdsBySources(sources: Collection<String>): List<Long>
 
 	@Transaction
 	@Query(

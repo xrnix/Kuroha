@@ -158,7 +158,7 @@ class SourcesManageFragment :
 
 		override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
 			R.id.action_catalog -> {
-				router.openSourcesCatalog()
+				AddBuiltInSourcesSheet().show(childFragmentManager, "AddBuiltInSourcesSheet")
 				true
 			}
 

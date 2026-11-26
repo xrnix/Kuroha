@@ -51,6 +51,23 @@ class AlternativesUseCase @Inject constructor(
 
 	suspend operator fun invoke(
 		manga: Manga,
+		targetSources: Set<String>,
+		query: String = manga.title,
+		loadDetails: Boolean = true,
+	): Flow<Manga> {
+		if (targetSources.isEmpty()) return emptyFlow()
+		val enabledByName = sourcesRepository.getEnabledSources().associateBy { it.name }
+		val sources = targetSources.mapNotNull { name ->
+			if (name == manga.source.name) return@mapNotNull null
+			enabledByName[name] ?: org.koitharu.kotatsu.core.model.MangaSource(name).let { s ->
+				if (s == org.koitharu.kotatsu.core.model.UnknownMangaSource) null else s
+			}
+		}
+		return search(manga, sources, query, loadDetails)
+	}
+
+	suspend operator fun invoke(
+		manga: Manga,
 		sourceScope: AlternativeSourceScope,
 		query: String = manga.title,
 		loadDetails: Boolean = true,

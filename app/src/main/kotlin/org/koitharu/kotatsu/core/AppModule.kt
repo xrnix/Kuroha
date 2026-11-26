@@ -120,15 +120,17 @@ interface AppModule {
 				val rootDir = context.externalCacheDir ?: context.cacheDir
 				DiskCache.Builder()
 					.directory(rootDir.resolve(CacheDir.THUMBS.dir))
+					.maxSizePercent(0.1)
+					.maximumMaxSizeBytes(1024L * 1024 * 1024)
 					.build()
 			}
 			val okHttpClientLazy = lazy {
 				okHttpClientProvider.get().newBuilder().cache(null).build()
 			}
 			return ImageLoader.Builder(context)
-				.interceptorCoroutineContext(Dispatchers.Default)
+				.fetcherCoroutineContext(Dispatchers.IO.limitedParallelism(8))
+				.decoderCoroutineContext(Dispatchers.IO.limitedParallelism(3))
 				.diskCache(diskCacheFactory)
-				.logger(if (BuildConfig.DEBUG) DebugLogger() else null)
 				.allowRgb565(context.isLowRamDevice())
 				.eventListener(captchaHandler)
 				.components {

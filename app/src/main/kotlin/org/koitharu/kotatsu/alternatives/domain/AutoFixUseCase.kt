@@ -7,11 +7,14 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.core.model.chaptersCount
+import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -28,36 +31,52 @@ class AutoFixUseCase @Inject constructor(
 	private val mangaDataRepository: MangaDataRepository,
 ) {
 
-	suspend operator fun invoke(mangaId: Long): Pair<Manga, Manga?> {
-		val seed = checkNotNull(
-			mangaDataRepository.findMangaById(mangaId, withChapters = true),
-		) { "Manga $mangaId not found" }.getDetailsSafe()
-		if (seed.isHealthy()) {
-			return seed to null // no fix required
+	suspend operator fun invoke(mangaId: Long, targets: List<String>? = null): Pair<Manga, Manga?> {
+		val seed = loadSeed(mangaId)
+		val replacement = if (targets == null) {
+			if (seed.isHealthy()) {
+				return seed to null // no fix required
+			}
+			val sourceScope = alternativesUseCase.getSourceScopeOptions(
+				ref = seed.source,
+				sameLanguageOnly = true,
+			).defaultScope
+			alternativesUseCase(seed, sourceScope = sourceScope)
+				.filter { it.isHealthy() }
+				.runningFold<Manga, Manga?>(null) { best, candidate ->
+					if (best == null || best < candidate) {
+						candidate
+					} else {
+						best
+					}
+				}.selectLastWithTimeout(4, 40, TimeUnit.SECONDS)
+		} else {
+			pickWorking(findCandidates(seed, targets))
 		}
-		val sourceScope = alternativesUseCase.getSourceScopeOptions(
-			ref = seed.source,
-			sameLanguageOnly = true,
-		).defaultScope
-		val replacement = alternativesUseCase(seed, sourceScope = sourceScope)
-			.filter { it.isHealthy() }
-			.runningFold<Manga, Manga?>(null) { best, candidate ->
-				if (best == null || best < candidate) {
-					candidate
-				} else {
-					best
-				}
-			}.selectLastWithTimeout(4, 40, TimeUnit.SECONDS)
 		migrateUseCase(seed, replacement ?: throw NoAlternativesException(ParcelableManga(seed)))
 		return seed to replacement
 	}
+
+	suspend fun loadSeed(mangaId: Long): Manga = checkNotNull(
+		mangaDataRepository.findMangaById(mangaId, withChapters = true),
+	) { "Manga $mangaId not found" }.getDetailsSafe()
+
+	suspend fun findCandidates(seed: Manga, targets: List<String>): List<Manga> {
+		val found = ArrayList<Manga>()
+		withTimeoutOrNull(TimeUnit.SECONDS.toMillis(40)) {
+			alternativesUseCase(seed, targets.toSet()).toList(found)
+		}
+		return found.sortedBy { targets.indexOf(it.source.name) }
+	}
+
+	suspend fun pickWorking(candidates: List<Manga>): Manga? = candidates.firstOrNull { it.isHealthy() }
 
 	private suspend fun Manga.isHealthy(): Boolean = runCatchingCancellable {
 		val repo = mangaRepositoryFactory.create(source)
 		val details = if (this.chapters != null) this else repo.getDetails(this)
 		val firstChapter = details.chapters?.firstOrNull() ?: return@runCatchingCancellable false
-		val pageUrl = repo.getPageUrl(repo.getPages(firstChapter).first())
-		pageUrl.toHttpUrlOrNull() != null
+		val pageUrl = repo.getPageUrl(repo.getPages(details, firstChapter).first())
+		pageUrl.toHttpUrlOrNull() != null || (source.isExternalSource() && pageUrl.isNotEmpty())
 	}.getOrDefault(false)
 
 	private suspend fun Manga.getDetailsSafe() = runCatchingCancellable {
