@@ -27,11 +27,21 @@ fun mangaListDetailedItemAD(
 		}
 	}
 
+	var lastItem: MangaDetailedListModel? = null
+
 	bind { payloads ->
-		binding.textViewTitle.text = item.title
-		binding.textViewSource.text = item.source.getTitle(context)
+		val prev = lastItem
+		lastItem = item
+		if (prev == null || prev.title != item.title) {
+			binding.textViewTitle.text = item.title
+		}
+		if (prev == null || prev.source != item.source) {
+			binding.textViewSource.text = item.source.getTitle(context)
+		}
 		binding.imageViewFavicon.setImageAsync(item.source)
-		binding.textViewAuthor.textAndVisible = item.manga.authors.joinToString(", ")
+		if (prev == null || prev.manga.authors != item.manga.authors) {
+			binding.textViewAuthor.textAndVisible = item.manga.authors.joinToString(", ")
+		}
 		binding.corners.progressView.setProgress(
 			value = item.progress,
 			animate = ListModelDiffCallback.PAYLOAD_PROGRESS_CHANGED in payloads,
@@ -39,7 +49,9 @@ fun mangaListDetailedItemAD(
 		binding.iconsViewBottom.setMangaBadges(item.isSaved, item.isFavorite)
 		binding.corners.imageViewPin.isVisible = item.isPinned
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)
-		binding.textViewTags.text = item.tags.joinToString(separator = ", ") { it.title ?: "" }
+		if (prev == null || prev.tags != item.tags) {
+			binding.textViewTags.text = item.tags.joinToString(separator = ", ") { it.title ?: "" }
+		}
 		binding.corners.badge.number = item.counter
 		binding.corners.badge.isVisible = item.counter > 0
 	}

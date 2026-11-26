@@ -29,7 +29,8 @@ class BarBlur(
 		setColorUniform("topColor", Color.valueOf(color(materialR.attr.colorSurface)))
 		setColorUniform("bottomColor", Color.valueOf(color(materialR.attr.colorSurfaceContainer)))
 	}
-	private var last = FloatArray(3) { Float.NaN }
+	private val last = FloatArray(3) { Float.NaN }
+	private var lastOverlap = Int.MIN_VALUE
 
 	var isEnabled = false
 		set(value) {
@@ -43,12 +44,14 @@ class BarBlur(
 				content.setRenderEffect(null)
 				content.setTag(R.id.tag_bottom_nav_overlap, null)
 				last.fill(Float.NaN)
+				lastOverlap = Int.MIN_VALUE
 			}
 		}
 
 	/** Height of the top zone in px: the status bar plus a tail below it, 0 when the bar is hidden. */
 	var statusBarZone = 0f
 		set(value) {
+			if (field == value) return
 			field = value
 			content.invalidate()
 		}
@@ -64,9 +67,15 @@ class BarBlur(
 			0f
 		}
 		if (top == last[0] && statusBarZone == last[1] && bottomZone == last[2]) return true
-		last = floatArrayOf(top, statusBarZone, bottomZone)
+		last[0] = top
+		last[1] = statusBarZone
+		last[2] = bottomZone
 		// Lets overlays drawn inside the content (the fast scroller) stay clear of the nav pill
-		content.setTag(R.id.tag_bottom_nav_overlap, (bottomZone / BOTTOM_HEIGHT_FACTOR).roundToInt())
+		val overlap = (bottomZone / BOTTOM_HEIGHT_FACTOR).roundToInt()
+		if (overlap != lastOverlap) {
+			lastOverlap = overlap
+			content.setTag(R.id.tag_bottom_nav_overlap, overlap)
+		}
 		content.setRenderEffect(
 			if (statusBarZone < 1f && bottomZone < 1f) {
 				null

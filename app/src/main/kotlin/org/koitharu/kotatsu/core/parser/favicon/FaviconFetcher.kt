@@ -7,6 +7,8 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
+import android.util.LruCache
 import coil3.ColorImage
 import coil3.ImageLoader
 import coil3.asImage
@@ -20,9 +22,11 @@ import coil3.request.Options
 import coil3.size.pxOrElse
 import coil3.toAndroidUri
 import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.IOException
 import okio.Path.Companion.toOkioPath
@@ -46,6 +50,7 @@ import org.koitharu.kotatsu.mihon.MihonMangaRepository
 import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import coil3.Uri as CoilUri
 
@@ -104,10 +109,16 @@ class FaviconFetcher(
 		)
 		val cacheKey = options.diskCacheKey ?: "${repository.source.name}_$sizePx"
 		if (options.diskCachePolicy.readEnabled) {
-			localStorageCache[cacheKey]?.let { file ->
+			val cached = withContext(Dispatchers.IO) {
+				localStorageCache[cacheKey]?.let { file ->
+					file to MimeTypes.probeMimeType(file)?.toString()
+				}
+			}
+			if (cached != null) {
+				val (file, mimeType) = cached
 				return SourceFetchResult(
 					source = ImageSource(file.toOkioPath(), FileSystem.SYSTEM),
-					mimeType = MimeTypes.probeMimeType(file)?.toString(),
+					mimeType = mimeType,
 					dataSource = DataSource.DISK,
 				)
 			}
@@ -140,11 +151,20 @@ class FaviconFetcher(
 
 	private suspend fun fetchPluginIcon(repository: ExternalMangaRepository): FetchResult {
 		val source = repository.source
+		val cacheKey = "plugin:${source.packageName}:${source.authority}"
+		packageIconCache.get(cacheKey)?.newDrawable(options.context.resources)?.let { cachedIcon ->
+			return ImageFetchResult(
+				image = cachedIcon.nonAdaptive().asImage(),
+				isSampled = false,
+				dataSource = DataSource.MEMORY,
+			)
+		}
 		val pm = options.context.packageManager
-		val icon = runInterruptible {
+		val icon = runInterruptible(Dispatchers.IO) {
 			val provider = pm.resolveContentProvider(source.authority, 0)
 			provider?.loadIcon(pm) ?: pm.getApplicationIcon(source.packageName)
 		}
+		icon.constantState?.let { packageIconCache.put(cacheKey, it) }
 		return ImageFetchResult(
 			image = icon.nonAdaptive().asImage(),
 			isSampled = false,
@@ -158,12 +178,19 @@ class FaviconFetcher(
 	private suspend fun fetchMihonIcon(source: MihonMangaSource): FetchResult = fetchPackageIcon(source.pkgName)
 
 	private suspend fun fetchPackageIcon(pkgName: String): FetchResult {
+		packageIconCache.get(pkgName)?.newDrawable(options.context.resources)?.let { cachedIcon ->
+			return ImageFetchResult(
+				image = cachedIcon.nonAdaptive().asImage(),
+				isSampled = false,
+				dataSource = DataSource.MEMORY,
+			)
+		}
 		val icon = runCatchingCancellable {
-			runInterruptible {
+			runInterruptible(Dispatchers.IO) {
 				options.context.packageManager.getApplicationIcon(pkgName)
 			}
 		}.getOrNull() ?: runCatchingCancellable {
-			runInterruptible {
+			runInterruptible(Dispatchers.IO) {
 				val ctx = options.context
 				val extFile = File(MihonExtensionLoader.getPrivateExtensionDir(ctx), "$pkgName.ext")
 				if (!extFile.isFile) return@runInterruptible null
@@ -177,6 +204,7 @@ class FaviconFetcher(
 			}
 		}.getOrNull() ?: return requireNotNull(imageLoader.fetch(R.drawable.ic_manga_source, options))
 
+		icon.constantState?.let { packageIconCache.put(pkgName, it) }
 		return ImageFetchResult(
 			image = icon.nonAdaptive().asImage(),
 			isSampled = false,
@@ -191,7 +219,11 @@ class FaviconFetcher(
 		val existing = sourceId?.let { mihonExtensionManager.getMihonMangaSourceById(it) }
 			?: mihonExtensionManager.getMihonMangaSourceByName(name)
 		if (existing != null) return existing
-		mihonExtensionManager.ensureReady(forceRefresh = true)
+		val now = SystemClock.elapsedRealtime()
+		val prev = lastForceRefreshAt.get()
+		if (now - prev >= FORCE_REFRESH_COOLDOWN_MS && lastForceRefreshAt.compareAndSet(prev, now)) {
+			mihonExtensionManager.ensureReady(forceRefresh = true)
+		}
 		return sourceId?.let { mihonExtensionManager.getMihonMangaSourceById(it) }
 			?: mihonExtensionManager.getMihonMangaSourceByName(name)
 	}
@@ -220,11 +252,14 @@ class FaviconFetcher(
 		it.printStackTraceDebug()
 	}.getOrDefault(result)
 
-	private fun File.asFetchResult() = SourceFetchResult(
-		source = ImageSource(toOkioPath(), FileSystem.SYSTEM),
-		mimeType = MimeTypes.probeMimeType(this)?.toString(),
-		dataSource = DataSource.DISK,
-	)
+	private suspend fun File.asFetchResult(): SourceFetchResult {
+		val mimeType = withContext(Dispatchers.IO) { MimeTypes.probeMimeType(this@asFetchResult)?.toString() }
+		return SourceFetchResult(
+			source = ImageSource(toOkioPath(), FileSystem.SYSTEM),
+			mimeType = mimeType,
+			dataSource = DataSource.DISK,
+		)
+	}
 
 	class Factory @Inject constructor(
 		private val mangaRepositoryFactory: MangaRepository.Factory,
@@ -253,6 +288,10 @@ class FaviconFetcher(
 	private companion object {
 
 		const val FALLBACK_SIZE = 9999 // largest icon
+		const val FORCE_REFRESH_COOLDOWN_MS = 10_000L
+
+		val packageIconCache = LruCache<String, Drawable.ConstantState>(64)
+		val lastForceRefreshAt = AtomicLong(0L)
 
 		private fun throwNSEE(lastError: Exception?): Nothing {
 			if (lastError != null) {

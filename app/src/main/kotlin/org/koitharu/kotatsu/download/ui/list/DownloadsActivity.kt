@@ -76,16 +76,24 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-		viewBinding.recyclerView.updatePadding(
-			left = bars.left,
-			right = bars.right,
-			bottom = bars.bottom,
-		)
-		viewBinding.appbar.updatePadding(
-			left = bars.left,
-			right = bars.right,
-			top = bars.top,
-		)
+		with(viewBinding.recyclerView) {
+			if (paddingLeft != bars.left || paddingRight != bars.right || paddingBottom != bars.bottom) {
+				updatePadding(
+					left = bars.left,
+					right = bars.right,
+					bottom = bars.bottom,
+				)
+			}
+		}
+		with(viewBinding.appbar) {
+			if (paddingLeft != bars.left || paddingRight != bars.right || paddingTop != bars.top) {
+				updatePadding(
+					left = bars.left,
+					right = bars.right,
+					top = bars.top,
+				)
+			}
+		}
 		return WindowInsetsCompat.Builder(insets)
 			.setInsets(WindowInsetsCompat.Type.systemBars(), Insets.NONE)
 			.build()

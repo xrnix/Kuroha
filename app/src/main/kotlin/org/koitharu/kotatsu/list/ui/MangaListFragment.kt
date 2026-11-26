@@ -134,12 +134,14 @@ abstract class MangaListFragment :
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
 		val basePadding = v.resources.getDimensionPixelOffset(R.dimen.list_spacing_normal)
-		viewBinding?.recyclerView?.setPadding(
-			left = barsInsets.left + basePadding,
-			top = basePadding,
-			right = barsInsets.right + basePadding,
-			bottom = barsInsets.bottom + basePadding,
-		)
+		val left = barsInsets.left + basePadding
+		val right = barsInsets.right + basePadding
+		val bottom = barsInsets.bottom + basePadding
+		viewBinding?.recyclerView?.let { rv ->
+			if (rv.paddingLeft != left || rv.paddingTop != basePadding || rv.paddingRight != right || rv.paddingBottom != bottom) {
+				rv.setPadding(left, basePadding, right, bottom)
+			}
+		}
 		return insets.consumeAll(typeMask)
 	}
 
@@ -252,21 +254,24 @@ abstract class MangaListFragment :
 	private fun onListModeChanged(mode: ListMode) {
 		spanSizeLookup.invalidateCache()
 		with(requireViewBinding().recyclerView) {
-			removeOnLayoutChangeListener(spanResolver)
+			val currentLm = layoutManager
 			when (mode) {
-				ListMode.LIST -> {
-					layoutManager = FitHeightLinearLayoutManager(context)
-				}
-
+				ListMode.LIST,
 				ListMode.DETAILED_LIST -> {
-					layoutManager = FitHeightLinearLayoutManager(context)
+					removeOnLayoutChangeListener(spanResolver)
+					if (currentLm == null || currentLm::class.java != FitHeightLinearLayoutManager::class.java) {
+						layoutManager = FitHeightLinearLayoutManager(context)
+					}
 				}
 
 				ListMode.GRID -> {
-					layoutManager = FitHeightGridLayoutManager(context, checkNotNull(spanResolver).spanCount).also {
-						it.spanSizeLookup = spanSizeLookup
+					if (currentLm !is FitHeightGridLayoutManager) {
+						removeOnLayoutChangeListener(spanResolver)
+						layoutManager = FitHeightGridLayoutManager(context, checkNotNull(spanResolver).spanCount).also {
+							it.spanSizeLookup = spanSizeLookup
+						}
+						addOnLayoutChangeListener(spanResolver)
 					}
-					addOnLayoutChangeListener(spanResolver)
 				}
 			}
 		}

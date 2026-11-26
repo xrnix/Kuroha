@@ -29,3 +29,12 @@
 -keep class org.acra.config.DefaultRetryPolicy { *; }
 -keep class org.acra.attachment.DefaultAttachmentProvider { *; }
 -keep class org.acra.sender.JobSenderService
+
+# Keep generic signatures & Injekt TypeReferences for Mihon extension runtime under R8 full mode
+-keepattributes Signature,InnerClasses,EnclosingMethod
+-keep class uy.kohesive.injekt.** { *; }
+-keep class * extends uy.kohesive.injekt.api.TypeReference { *; }
+-keep class * extends uy.kohesive.injekt.api.FullTypeReference { *; }
+-keep class org.koitharu.kotatsu.mihon.compat.** { *; }
+-keep class eu.kanade.tachiyomi.** { *; }
+-keep class rx.** { *; }

@@ -29,6 +29,28 @@ fun chapterGridItemAD(
 		R.style.Widget_Kotatsu_Details_ChapterGridCard_Expressive
 	val titleTypeface = binding.textViewTitle.typeface
 
+	val expressiveColors = if (isExpressive) {
+		binding.imageViewNew.imageTintList = ColorStateList.valueOf(
+			context.getThemeColor(appcompatR.attr.colorError),
+		)
+		val currentContent = context.getThemeColor(materialR.attr.colorOnPrimaryContainer)
+		val newContent = context.getThemeColor(materialR.attr.colorOnSecondaryContainer)
+		val unreadContent = context.getThemeColor(materialR.attr.colorOnSurface)
+		val readContent = context.getThemeColor(materialR.attr.colorOnSurfaceVariant)
+		arrayOf(
+			Triple(context.getThemeColor(materialR.attr.colorPrimaryContainer), currentContent, ColorStateList.valueOf(currentContent)),
+			Triple(context.getThemeColor(materialR.attr.colorSecondaryContainer), newContent, ColorStateList.valueOf(newContent)),
+			Triple(context.getThemeColor(materialR.attr.colorSurfaceContainer), unreadContent, ColorStateList.valueOf(unreadContent)),
+			Triple(context.getThemeColor(materialR.attr.colorSurfaceContainerLow), readContent, ColorStateList.valueOf(readContent)),
+		)
+	} else {
+		null
+	}
+	val textColorPrimary = if (!isExpressive) context.getThemeColorStateList(android.R.attr.textColorPrimary) else null
+	val textColorHint = if (!isExpressive) context.getThemeColorStateList(android.R.attr.textColorHint) else null
+
+	var lastVisualState = -1
+
 	bind { payloads ->
 		if (payloads.isEmpty()) {
 			binding.textViewTitle.text = item.chapter.numberString() ?: "?"
@@ -39,58 +61,52 @@ fun chapterGridItemAD(
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
 		binding.imageViewDownloaded.isVisible = item.isDownloaded
 
-		if (isExpressive) {
-			val containerAttr: Int
-			val contentAttr: Int
-			when {
-				item.isCurrent -> {
-					containerAttr = materialR.attr.colorPrimaryContainer
-					contentAttr = materialR.attr.colorOnPrimaryContainer
-				}
-
-				item.isUnread && item.isNew -> {
-					containerAttr = materialR.attr.colorSecondaryContainer
-					contentAttr = materialR.attr.colorOnSecondaryContainer
-				}
-
-				item.isUnread -> {
-					containerAttr = materialR.attr.colorSurfaceContainer
-					contentAttr = materialR.attr.colorOnSurface
-				}
-
-				else -> {
-					containerAttr = materialR.attr.colorSurfaceContainerLow
-					contentAttr = materialR.attr.colorOnSurfaceVariant
-				}
+		if (expressiveColors != null) {
+			val stateIndex = when {
+				item.isCurrent -> 0
+				item.isUnread && item.isNew -> 1
+				item.isUnread -> 2
+				else -> 3
 			}
-			val contentColor = context.getThemeColor(contentAttr)
-			binding.root.setCardBackgroundColor(context.getThemeColor(containerAttr))
-			binding.textViewTitle.setTextColor(contentColor)
-			binding.textViewTitle.setTypeface(
-				titleTypeface,
-				if (item.isCurrent || item.isNew) Typeface.BOLD else Typeface.NORMAL,
-			)
-			val tint = ColorStateList.valueOf(contentColor)
-			binding.imageViewCurrent.imageTintList = tint
-			binding.imageViewBookmarked.imageTintList = tint
-			binding.imageViewDownloaded.imageTintList = tint
-			binding.imageViewNew.imageTintList = ColorStateList.valueOf(
-				context.getThemeColor(appcompatR.attr.colorError),
-			)
-		} else when {
-			item.isCurrent -> {
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
-				binding.textViewTitle.setTypeface(titleTypeface, Typeface.BOLD)
+			val isBold = item.isCurrent || item.isNew
+			val visualKey = (stateIndex shl 1) or (if (isBold) 1 else 0)
+			if (lastVisualState != visualKey) {
+				lastVisualState = visualKey
+				val (containerColor, contentColor, tint) = expressiveColors[stateIndex]
+				binding.root.setCardBackgroundColor(containerColor)
+				binding.textViewTitle.setTextColor(contentColor)
+				binding.textViewTitle.setTypeface(
+					titleTypeface,
+					if (isBold) Typeface.BOLD else Typeface.NORMAL,
+				)
+				binding.imageViewCurrent.imageTintList = tint
+				binding.imageViewBookmarked.imageTintList = tint
+				binding.imageViewDownloaded.imageTintList = tint
 			}
-
-			item.isUnread -> {
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
-				binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
+		} else {
+			val visualKey = when {
+				item.isCurrent -> 0
+				item.isUnread -> 1
+				else -> 2
 			}
+			if (lastVisualState != visualKey) {
+				lastVisualState = visualKey
+				when (visualKey) {
+					0 -> {
+						binding.textViewTitle.setTextColor(textColorPrimary)
+						binding.textViewTitle.setTypeface(titleTypeface, Typeface.BOLD)
+					}
 
-			else -> {
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
-				binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
+					1 -> {
+						binding.textViewTitle.setTextColor(textColorPrimary)
+						binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
+					}
+
+					else -> {
+						binding.textViewTitle.setTextColor(textColorHint)
+						binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
+					}
+				}
 			}
 		}
 	}

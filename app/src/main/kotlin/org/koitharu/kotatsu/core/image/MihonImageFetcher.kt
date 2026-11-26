@@ -47,7 +47,7 @@ class MihonImageFetcher(
 
 	override suspend fun fetch(): FetchResult? {
 		val diskCacheKey = diskCacheKeyLazy.value
-		readFromDiskCache(diskCacheKey)?.let { snapshot ->
+		withContext(Dispatchers.IO) { readFromDiskCache(diskCacheKey) }?.let { snapshot ->
 			return SourceFetchResult(
 				source = snapshot.toImageSource(diskCacheKey!!),
 				mimeType = null,
@@ -65,7 +65,7 @@ class MihonImageFetcher(
 			httpSource.client.newCall(request).awaitSuccess()
 		}
 		try {
-			writeToDiskCache(response, diskCacheKey)?.let { snapshot ->
+			withContext(Dispatchers.IO) { writeToDiskCache(response, diskCacheKey) }?.let { snapshot ->
 				val mimeType = response.body.contentType()?.toString()
 				// The snapshot owns the cached bytes, not the network response. Closing here
 				// releases the extension client's socket back to Mihon's shared connection pool.

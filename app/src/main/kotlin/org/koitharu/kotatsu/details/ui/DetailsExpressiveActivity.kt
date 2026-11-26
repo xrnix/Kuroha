@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
@@ -73,6 +74,8 @@ class DetailsExpressiveActivity :
 
 	private val topInset = mutableIntStateOf(0)
 	private val bottomInset = mutableIntStateOf(0)
+	private var lastTopInset = -1
+	private var lastBottomInset = -1
 	private var isDarkTheme = false
 
 	// Pull-to-refresh is only allowed when the content is scrolled to the top, so the gesture never
@@ -216,7 +219,7 @@ class DetailsExpressiveActivity :
 				val coverRefreshes by viewModel.coverRefreshes.collectAsState()
 				val backdropUrl by viewModel.backdropUrl.collectAsState()
 				val tags by viewModel.tags.collectAsState()
-				val favLabel = favs.takeIf { it.isNotEmpty() }?.joinToString { it.title }
+				val favLabel = remember(favs) { favs.takeIf { it.isNotEmpty() }?.joinToString { it.title } }
 
 				val isBackdropEnabled by rememberBooleanPref(AppSettings.KEY_DETAILS_BACKDROP, true)
 				val backdropBlurAmount by rememberDetailsBackdropBlurPref(AppSettings.KEY_DETAILS_BACKDROP_BLUR_AMOUNT, 2)
@@ -300,19 +303,32 @@ class DetailsExpressiveActivity :
 	// stays hidden, so the bar never turns into a solid bar on scroll. We only track whether the
 	// content is at the top so pull-to-refresh is enabled only there.
 	private fun onContentScroll(scrollY: Int) {
-		contentAtTop = scrollY <= 0
-		updateSwipeRefreshEnabled()
+		val atTop = scrollY <= 0
+		if (atTop != contentAtTop) {
+			contentAtTop = atTop
+			updateSwipeRefreshEnabled()
+		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
 		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-		topInset.intValue = bars.top
-		bottomInset.intValue = bars.bottom
-		viewBinding.appbar.updatePadding(top = bars.top)
-		viewBinding.containerChapters?.updatePadding(top = bars.top)
-		// Match the rest of the app: rest the refresh indicator just under the status bar (the same
-		// offset the old details screen used), not pushed down below the whole top bar.
-		viewBinding.swipeRefreshLayout.setProgressViewOffset(false, bars.top, bars.top + 180)
+		if (bars.top != lastTopInset || bars.bottom != lastBottomInset) {
+			lastTopInset = bars.top
+			lastBottomInset = bars.bottom
+			topInset.intValue = bars.top
+			bottomInset.intValue = bars.bottom
+			if (viewBinding.appbar.paddingTop != bars.top) {
+				viewBinding.appbar.updatePadding(top = bars.top)
+			}
+			viewBinding.containerChapters?.let {
+				if (it.paddingTop != bars.top) {
+					it.updatePadding(top = bars.top)
+				}
+			}
+			// Match the rest of the app: rest the refresh indicator just under the status bar (the same
+			// offset the old details screen used), not pushed down below the whole top bar.
+			viewBinding.swipeRefreshLayout.setProgressViewOffset(false, bars.top, bars.top + 180)
+		}
 		return insets
 	}
 

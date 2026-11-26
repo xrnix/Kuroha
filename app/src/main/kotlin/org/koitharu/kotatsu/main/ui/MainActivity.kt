@@ -189,13 +189,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			setHintTextColor(topBarIconTint)
 			compoundDrawablePadding = resources.getDimensionPixelOffset(R.dimen.margin_small)
 		}
+		var searchBarTextContainer: View? = null
 		viewBinding.searchBar.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-			val container = viewBinding.searchBar.findViewById<View>(
+			val container = searchBarTextContainer ?: viewBinding.searchBar.findViewById<View>(
 				com.google.android.material.R.id.open_search_bar_text_view_container
-			)
-			if (container != null && viewBinding.searchBar.height > 0 && viewBinding.searchBar.textView.height > 0) {
-				val idealTop = (viewBinding.searchBar.height - viewBinding.searchBar.textView.height) / 2f
-				viewBinding.searchBar.textView.translationY = idealTop - container.top
+			).also { searchBarTextContainer = it }
+			val barHeight = viewBinding.searchBar.height
+			val textView = viewBinding.searchBar.textView
+			if (container != null && barHeight > 0 && textView.height > 0) {
+				val targetY = (barHeight - textView.height) / 2f - container.top
+				if (kotlin.math.abs(textView.translationY - targetY) > 0.5f) {
+					textView.translationY = targetY
+				}
 			}
 		}
 

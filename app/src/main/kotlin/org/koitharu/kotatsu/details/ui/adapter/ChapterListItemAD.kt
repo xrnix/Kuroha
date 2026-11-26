@@ -30,66 +30,99 @@ fun chapterListItemAD(
 	itemView.isFocusable = false
 	itemView.isFocusableInTouchMode = false
 	val density = context.resources.displayMetrics.density
+	val currentElevation = 2f * density
+	val colorPrimary = context.getThemeColor(androidx.appcompat.R.attr.colorPrimary)
+	val colorPrimaryList = context.getThemeColorStateList(androidx.appcompat.R.attr.colorPrimary)
+	val colorContainerCurrent = context.getThemeColor(materialR.attr.colorSurfaceContainerHighest)
+	val colorContainerUnread = context.getThemeColor(materialR.attr.colorSurfaceContainer)
+	val colorContainerRead = context.getThemeColor(materialR.attr.colorSurfaceContainerLow)
+	val textColorPrimary = context.getThemeColorStateList(android.R.attr.textColorPrimary)
+	val textColorSecondary = context.getThemeColorStateList(materialR.attr.colorOnSurfaceVariant)
+	val textColorHint = context.getThemeColorStateList(android.R.attr.textColorHint)
+	val iconNew = ContextCompat.getDrawable(context, R.drawable.ic_new)
+	val currentIndicatorDrawable = GradientDrawable().apply {
+		shape = GradientDrawable.RECTANGLE
+		cornerRadius = 2f * density
+	}
+	binding.root.strokeWidth = 0
+
+	var lastVisualState = -1
+	var lastCurrentAccent = 0
+	var lastBookmarkAccent: Int? = null
+	var hasBookmarkTint = false
 
 	bind {
 		binding.textViewTitle.text = item.getTitle(context.resources)
 		binding.textViewDescription.textAndVisible = item.description
+		val customAccent = accentColorProvider()
 		when {
 			item.isCurrent -> {
-				val accent = accentColorProvider()
-					?: context.getThemeColor(androidx.appcompat.R.attr.colorPrimary)
-				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerHighest))
-				binding.root.strokeWidth = 0
-				binding.root.cardElevation = 2f * density
-				binding.viewCurrentIndicator.background = GradientDrawable().apply {
-					shape = GradientDrawable.RECTANGLE
-					cornerRadius = 2f * density
-					setColor(accent)
+				val accent = customAccent ?: colorPrimary
+				if (lastVisualState != 0 || lastCurrentAccent != accent) {
+					lastVisualState = 0
+					lastCurrentAccent = accent
+					binding.root.setCardBackgroundColor(colorContainerCurrent)
+					binding.root.cardElevation = currentElevation
+					currentIndicatorDrawable.setColor(accent)
+					if (binding.viewCurrentIndicator.background !== currentIndicatorDrawable) {
+						binding.viewCurrentIndicator.background = currentIndicatorDrawable
+					}
+					binding.viewCurrentIndicator.isVisible = true
+					if (binding.textViewTitle.drawableStart != null) {
+						binding.textViewTitle.drawableStart = null
+					}
+					binding.textViewTitle.setTextColor(accent)
+					binding.textViewDescription.setTextColor(accent)
+					binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD
+					binding.textViewDescription.typeface = Typeface.DEFAULT_BOLD
+					binding.textViewTitle.textSize = 16.5f
 				}
-				binding.viewCurrentIndicator.isVisible = true
-				binding.textViewTitle.drawableStart = null
-				binding.textViewTitle.setTextColor(accent)
-				binding.textViewDescription.setTextColor(accent)
-				binding.textViewTitle.typeface = Typeface.DEFAULT_BOLD
-				binding.textViewDescription.typeface = Typeface.DEFAULT_BOLD
-				binding.textViewTitle.textSize = 16.5f
 			}
 
 			item.isUnread -> {
-				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainer))
-				binding.root.strokeWidth = 0
-				binding.root.cardElevation = 0f
-				binding.viewCurrentIndicator.background = null
-				binding.viewCurrentIndicator.isVisible = false
-				binding.textViewTitle.drawableStart = if (item.isNew) {
-					ContextCompat.getDrawable(context, R.drawable.ic_new)
-				} else {
-					null
+				if (lastVisualState != 1) {
+					lastVisualState = 1
+					binding.root.setCardBackgroundColor(colorContainerUnread)
+					binding.root.cardElevation = 0f
+					binding.viewCurrentIndicator.background = null
+					binding.viewCurrentIndicator.isVisible = false
+					binding.textViewTitle.setTextColor(textColorPrimary)
+					binding.textViewDescription.setTextColor(textColorSecondary)
+					binding.textViewTitle.typeface = Typeface.DEFAULT
+					binding.textViewDescription.typeface = Typeface.DEFAULT
+					binding.textViewTitle.textSize = 15.5f
 				}
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorPrimary))
-				binding.textViewDescription.setTextColor(context.getThemeColorStateList(materialR.attr.colorOnSurfaceVariant))
-				binding.textViewTitle.typeface = Typeface.DEFAULT
-				binding.textViewDescription.typeface = Typeface.DEFAULT
-				binding.textViewTitle.textSize = 15.5f
+				val targetStart = if (item.isNew) iconNew else null
+				if (binding.textViewTitle.drawableStart !== targetStart) {
+					binding.textViewTitle.drawableStart = targetStart
+				}
 			}
 
 			else -> {
-				binding.root.setCardBackgroundColor(context.getThemeColor(materialR.attr.colorSurfaceContainerLow))
-				binding.root.strokeWidth = 0
-				binding.root.cardElevation = 0f
-				binding.viewCurrentIndicator.background = null
-				binding.viewCurrentIndicator.isVisible = false
-				binding.textViewTitle.drawableStart = null
-				binding.textViewTitle.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
-				binding.textViewDescription.setTextColor(context.getThemeColorStateList(android.R.attr.textColorHint))
-				binding.textViewTitle.typeface = Typeface.DEFAULT
-				binding.textViewDescription.typeface = Typeface.DEFAULT
-				binding.textViewTitle.textSize = 15.5f
+				if (lastVisualState != 2) {
+					lastVisualState = 2
+					binding.root.setCardBackgroundColor(colorContainerRead)
+					binding.root.cardElevation = 0f
+					binding.viewCurrentIndicator.background = null
+					binding.viewCurrentIndicator.isVisible = false
+					if (binding.textViewTitle.drawableStart != null) {
+						binding.textViewTitle.drawableStart = null
+					}
+					binding.textViewTitle.setTextColor(textColorHint)
+					binding.textViewDescription.setTextColor(textColorHint)
+					binding.textViewTitle.typeface = Typeface.DEFAULT
+					binding.textViewDescription.typeface = Typeface.DEFAULT
+					binding.textViewTitle.textSize = 15.5f
+				}
 			}
 		}
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
-		binding.imageViewBookmarked.imageTintList = accentColorProvider()?.let { ColorStateList.valueOf(it) }
-			?: context.getThemeColorStateList(androidx.appcompat.R.attr.colorPrimary)
+		if (item.isBookmarked && (!hasBookmarkTint || lastBookmarkAccent != customAccent)) {
+			hasBookmarkTint = true
+			lastBookmarkAccent = customAccent
+			binding.imageViewBookmarked.imageTintList = customAccent?.let { ColorStateList.valueOf(it) }
+				?: colorPrimaryList
+		}
 		binding.imageViewDownloaded.isVisible = item.isDownloaded
 	}
 }

@@ -40,6 +40,7 @@ fun downloadItemAD(
 	// Tracks the last bound expanded state for THIS view holder so we only animate a real
 	// user toggle, not the initial bind or a recycle.
 	var lastExpanded: Boolean? = null
+	var lastBoundId: Any? = null
 
 	val clickListener = object : View.OnClickListener, View.OnLongClickListener {
 		override fun onClick(v: View) {
@@ -85,13 +86,21 @@ fun downloadItemAD(
 	}
 
 	onViewRecycled {
+		chaptersJob?.cancel()
+		chaptersJob = null
 		lastExpanded = null
+		lastBoundId = null
 	}
 
 	bind { payloads ->
-		binding.textViewTitle.text = item.manga?.title ?: getString(R.string.unknown)
+		val title = item.manga?.title ?: getString(R.string.unknown)
+		if (binding.textViewTitle.text != title) {
+			binding.textViewTitle.text = title
+		}
 		binding.imageViewCover.setImageAsync(item.manga?.coverUrl, item.manga)
-		if (chaptersJob == null || payloads.isEmpty()) {
+		val isDifferentItem = lastBoundId != item.id
+		lastBoundId = item.id
+		if (chaptersJob == null || isDifferentItem || payloads.isEmpty()) {
 			chaptersJob?.cancel()
 			chaptersJob = lifecycleOwner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
 				item.chapters.collect { chapters ->
@@ -105,21 +114,23 @@ fun downloadItemAD(
 				scrollToCurrentChapter()
 			}
 		}
-		binding.buttonExpand.isChecked = item.isExpanded
-		binding.buttonExpand.setContentDescriptionAndTooltip(if (item.isExpanded) R.string.collapse else R.string.expand)
-		if (lastExpanded != null && lastExpanded != item.isExpanded) {
-			// Animate the chapter list growing/shrinking and the items below sliding.
-			(itemView.parent as? ViewGroup)?.let { parent ->
-				TransitionManager.beginDelayedTransition(
-					parent,
-					ChangeBounds().apply {
-						duration = 250L
-						interpolator = AccelerateDecelerateInterpolator()
-					},
-				)
+		if (lastExpanded != item.isExpanded) {
+			binding.buttonExpand.isChecked = item.isExpanded
+			binding.buttonExpand.setContentDescriptionAndTooltip(if (item.isExpanded) R.string.collapse else R.string.expand)
+			if (lastExpanded != null) {
+				// Animate the chapter list growing/shrinking and the items below sliding.
+				(itemView.parent as? ViewGroup)?.let { parent ->
+					TransitionManager.beginDelayedTransition(
+						parent,
+						ChangeBounds().apply {
+							duration = 250L
+							interpolator = AccelerateDecelerateInterpolator()
+						},
+					)
+				}
 			}
+			lastExpanded = item.isExpanded
 		}
-		lastExpanded = item.isExpanded
 		binding.recyclerViewChapters.isVisible = item.isExpanded
 		when (item.workState) {
 			WorkInfo.State.ENQUEUED,

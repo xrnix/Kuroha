@@ -83,9 +83,12 @@ class CoverStackView @JvmOverloads constructor(
 		val coverWidth = (coverSize * 13f).toInt()
 		val coverHeight = (coverSize * 18f).toInt()
 		children.forEach {
-			it.updateLayoutParams {
-				width = coverWidth
-				height = coverHeight
+			val lp = it.layoutParams
+			if (lp.width != coverWidth || lp.height != coverHeight) {
+				it.updateLayoutParams {
+					width = coverWidth
+					height = coverHeight
+				}
 			}
 		}
 	}

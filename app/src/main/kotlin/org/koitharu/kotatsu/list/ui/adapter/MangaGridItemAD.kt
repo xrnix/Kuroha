@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import coil3.size.Size
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
@@ -58,36 +57,51 @@ fun mangaGridItemAD(
 		cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, r, r, r, r)
 	}
 
+	var lastTooltipId = Long.MIN_VALUE
+	var lastCoverWidth = -1
+	var lastExactSize: Size? = null
+
 	bind { payloads ->
-		itemView.setTooltipCompat(item.getSummary(context))
+		if (lastTooltipId != item.id || payloads.isEmpty()) {
+			lastTooltipId = item.id
+			itemView.setTooltipCompat(item.getSummary(context))
+		}
 		val coverMargin = if (item.isGridSpacingIncreased) gridMarginIncreased else gridMargin
-		itemView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			if (
-				leftMargin != coverMargin ||
-				topMargin != coverMargin ||
-				rightMargin != coverMargin ||
-				bottomMargin != coverMargin
-			) {
-				setMargins(coverMargin, coverMargin, coverMargin, coverMargin)
-			}
+		val lp = itemView.layoutParams as ViewGroup.MarginLayoutParams
+		if (
+			lp.leftMargin != coverMargin ||
+			lp.topMargin != coverMargin ||
+			lp.rightMargin != coverMargin ||
+			lp.bottomMargin != coverMargin
+		) {
+			lp.setMargins(coverMargin, coverMargin, coverMargin, coverMargin)
+			itemView.layoutParams = lp
 		}
 		val isTitleOverCover = item.isTitleOverCover && !item.isTitleHidden
-		binding.textViewTitleOverlay.text = item.title
-		binding.textViewTitle.text = item.title
+		val isTitleBelowCover = !item.isTitleHidden && !isTitleOverCover
+		if (isTitleOverCover) {
+			binding.textViewTitleOverlay.text = item.title
+		} else if (isTitleBelowCover) {
+			binding.textViewTitle.text = item.title
+		}
 		binding.textViewTitleOverlay.isVisible = isTitleOverCover
 		binding.viewScrim.isVisible = isTitleOverCover
-		binding.textViewTitle.isVisible = !item.isTitleHidden && !isTitleOverCover
+		binding.textViewTitle.isVisible = isTitleBelowCover
 		binding.corners.progressView.setProgress(item.progress, PAYLOAD_PROGRESS_CHANGED in payloads)
 		binding.corners.imageViewPin.isVisible = item.isPinned
 		binding.corners.iconsView.setMangaBadges(item.isSaved, item.isFavorite)
 		// Load at a stable size derived from the grid cell width (not the transient measured view
 		// size), so covers in the ViewPager2-hosted grids stay sharp after rotation/settling.
 		val coverWidth = sizeResolver.cellWidth - coverMargin * 2
-		binding.imageViewCover.exactImageSize = if (coverWidth > 0) {
-			Size(coverWidth, coverWidth * 18 / 13)
-		} else {
-			null
+		if (coverWidth != lastCoverWidth) {
+			lastCoverWidth = coverWidth
+			lastExactSize = if (coverWidth > 0) {
+				Size(coverWidth, coverWidth * 18 / 13)
+			} else {
+				null
+			}
 		}
+		binding.imageViewCover.exactImageSize = lastExactSize
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)
 		binding.corners.badge.number = item.counter
 		binding.corners.badge.isVisible = item.counter > 0

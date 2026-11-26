@@ -8,6 +8,7 @@ import androidx.annotation.DrawableRes
 import androidx.core.content.withStyledAttributes
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import coil3.Image
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.request.Disposable
@@ -36,7 +37,6 @@ import org.koitharu.kotatsu.core.util.ext.isAnimationsEnabled
 import org.koitharu.kotatsu.core.util.ext.isNetworkError
 import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
-import java.util.LinkedList
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -59,8 +59,31 @@ open class CoilImageView @JvmOverloads constructor(
 	var crossfadeDurationFactor: Float = 1f
 
 	var placeholderDrawable: Drawable? = null
+		set(value) {
+			if (field !== value) {
+				field = value
+				cachedPlaceholderImage = value?.asImage()
+			}
+		}
 	var errorDrawable: Drawable? = null
+		set(value) {
+			if (field !== value) {
+				field = value
+				cachedErrorImage = value?.asImage()
+			}
+		}
 	var fallbackDrawable: Drawable? = null
+		set(value) {
+			if (field !== value) {
+				field = value
+				cachedFallbackImage = value?.asImage()
+			}
+		}
+
+	private var cachedPlaceholderImage: Image? = null
+	private var cachedErrorImage: Image? = null
+	private var cachedFallbackImage: Image? = null
+	private val defaultViewSizeResolver = ViewSizeResolver(this)
 
 	private var currentRequest: Disposable? = null
 	private var currentImageData: Any = NullRequestData
@@ -111,7 +134,7 @@ open class CoilImageView @JvmOverloads constructor(
 	}
 
 	fun addImageRequestListener(listener: ImageRequest.Listener) {
-		val list = listeners ?: LinkedList<ImageRequest.Listener>().also { listeners = it }
+		val list = listeners ?: ArrayList<ImageRequest.Listener>(2).also { listeners = it }
 		list.add(listener)
 	}
 
@@ -119,17 +142,23 @@ open class CoilImageView @JvmOverloads constructor(
 		listeners?.remove(listener)
 	}
 
-	fun setImageAsync(@DrawableRes resourceId: Int) = enqueueRequest(
-		newRequestBuilder()
-			.data(resourceId)
-			.build(),
-	)
+	fun setImageAsync(@DrawableRes resourceId: Int): Disposable {
+		reuseCurrentRequestIfSame(resourceId)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder()
+				.data(resourceId)
+				.build(),
+		)
+	}
 
-	fun setImageAsync(url: String?) = enqueueRequest(
-		newRequestBuilder()
-			.data(url)
-			.build(),
-	)
+	fun setImageAsync(url: String?): Disposable {
+		reuseCurrentRequestIfSame(url)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder()
+				.data(url)
+				.build(),
+		)
+	}
 
 	open fun setImageAsync(page: ReaderPage) = enqueueRequest(
 		newRequestBuilder()
@@ -153,6 +182,15 @@ open class CoilImageView @JvmOverloads constructor(
 		}
 	}
 
+	protected fun reuseCurrentRequestIfSame(data: Any?): Disposable? {
+		val resolvedData = data ?: NullRequestData
+		val previous = currentRequest
+		if (currentImageData == resolvedData && previous?.job?.isCancelled == false && !isFailed) {
+			return previous
+		}
+		return null
+	}
+
 	protected fun enqueueRequest(request: ImageRequest, force: Boolean = false): Disposable {
 		val previous = currentRequest
 		if (!force && currentImageData == request.data && previous?.job?.isCancelled == false && !isFailed) {
@@ -166,7 +204,7 @@ open class CoilImageView @JvmOverloads constructor(
 
 	protected open fun newRequestBuilder() = ImageRequest.Builder(context).apply {
 		lifecycle(findViewTreeLifecycleOwner())
-		val crossfadeDuration = if (context.isAnimationsEnabled) {
+		val crossfadeDuration = if (crossfadeDurationFactor > 0f && context.isAnimationsEnabled) {
 			(context.getAnimationDuration(R.integer.config_defaultAnimTime) * crossfadeDurationFactor).toInt()
 		} else {
 			0
@@ -190,7 +228,7 @@ open class CoilImageView @JvmOverloads constructor(
 		size(
 			exactImageSize?.let {
 				SizeResolver(it)
-			} ?: ViewSizeResolver(this@CoilImageView),
+			} ?: defaultViewSizeResolver,
 		)
 		scale(scaleType.toCoilScale())
 		listener(this@CoilImageView)
@@ -199,9 +237,9 @@ open class CoilImageView @JvmOverloads constructor(
 	}
 
 	private fun ImageRequest.Builder.setupPlaceholders() {
-		placeholder(placeholderDrawable?.asImage())
-		error(errorDrawable?.asImage())
-		fallback(fallbackDrawable?.asImage())
+		placeholder(cachedPlaceholderImage)
+		error(cachedErrorImage)
+		fallback(cachedFallbackImage)
 	}
 
 	private fun ScaleType.toCoilScale(): Scale = if (this == ScaleType.CENTER_CROP) {

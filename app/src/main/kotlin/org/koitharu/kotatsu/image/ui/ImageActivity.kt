@@ -19,14 +19,12 @@ import coil3.request.SuccessResult
 import coil3.request.lifecycle
 import coil3.request.target
 import coil3.target.GenericViewTarget
-import coil3.target.Target
 import com.davemorrissey.labs.subscaleview.ImageSource
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
-import org.koitharu.kotatsu.core.image.CoilImageView
 import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -114,13 +112,22 @@ class ImageActivity : BaseActivity<ActivityImageBinding>(),
 		val typeMask = WindowInsetsCompat.Type.systemBars()
 		val barsInsets = insets.getInsets(typeMask)
 		val baseMargin = v.resources.getDimensionPixelOffset(R.dimen.screen_padding)
-		viewBinding.buttonMenu.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			marginEnd = barsInsets.end(v) + baseMargin
-			topMargin = barsInsets.top + baseMargin
+		val newTop = barsInsets.top + baseMargin
+		val newEnd = barsInsets.end(v) + baseMargin
+		val menuLp = viewBinding.buttonMenu.layoutParams as? ViewGroup.MarginLayoutParams
+		if (menuLp == null || menuLp.marginEnd != newEnd || menuLp.topMargin != newTop) {
+			viewBinding.buttonMenu.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+				marginEnd = newEnd
+				topMargin = newTop
+			}
 		}
-		viewBinding.buttonBack.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-			marginStart = barsInsets.start(v) + baseMargin
-			topMargin = barsInsets.top + baseMargin
+		val newStart = barsInsets.start(v) + baseMargin
+		val backLp = viewBinding.buttonBack.layoutParams as? ViewGroup.MarginLayoutParams
+		if (backLp == null || backLp.marginStart != newStart || backLp.topMargin != newTop) {
+			viewBinding.buttonBack.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+				marginStart = newStart
+				topMargin = newTop
+			}
 		}
 		return insets.consumeAll(typeMask)
 	}

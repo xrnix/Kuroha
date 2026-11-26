@@ -58,6 +58,7 @@ class MemoryContentCache @Inject constructor(application: Application) : Compone
 
 	override fun onConfigurationChanged(newConfig: Configuration) = Unit
 
+	@Deprecated("Deprecated in Java")
 	override fun onLowMemory() = Unit
 
 	override fun onTrimMemory(level: Int) {
@@ -67,15 +68,9 @@ class MemoryContentCache @Inject constructor(application: Application) : Compone
 	}
 
 	private fun trimCache(cache: ExpiringLruCache<*>, level: Int) {
-		when (level) {
-			ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
-			ComponentCallbacks2.TRIM_MEMORY_COMPLETE,
-			ComponentCallbacks2.TRIM_MEMORY_MODERATE -> cache.clear()
-
-			ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
-			ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW,
-			ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> cache.trimToSize(1)
-
+		when {
+			level >= 60 -> cache.clear() // TRIM_MEMORY_MODERATE / TRIM_MEMORY_COMPLETE
+			level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> cache.trimToSize(1)
 			else -> cache.trimToSize(cache.maxSize / 2)
 		}
 	}

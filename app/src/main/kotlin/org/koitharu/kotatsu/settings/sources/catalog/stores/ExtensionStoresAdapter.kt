@@ -28,12 +28,18 @@ class ExtensionStoresAdapter(
 		setHasStableIds(true)
 	}
 
-	@SuppressLint("NotifyDataSetChanged")
 	fun submitList(value: List<ExtensionStoreState>) {
+		val oldItems = items.toList()
+		val diff = androidx.recyclerview.widget.DiffUtil.calculateDiff(object : androidx.recyclerview.widget.DiffUtil.Callback() {
+			override fun getOldListSize() = oldItems.size
+			override fun getNewListSize() = value.size
+			override fun areItemsTheSame(oldPos: Int, newPos: Int) = oldItems[oldPos].store.id == value[newPos].store.id
+			override fun areContentsTheSame(oldPos: Int, newPos: Int) = oldItems[oldPos] == value[newPos]
+		})
 		items.clear()
 		items.addAll(value)
 		labels = extensionStoreDisplayLabels(value.map { it.store })
-		notifyDataSetChanged()
+		diff.dispatchUpdatesTo(this)
 	}
 
 	fun move(fromIndex: Int, toIndex: Int): Boolean {

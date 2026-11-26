@@ -54,6 +54,7 @@ import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -83,6 +84,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -116,6 +118,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 
+@Immutable
 data class FloatingNavBarItem(
 	@IdRes val id: Int,
 	val titleRes: Int,
@@ -123,6 +126,7 @@ data class FloatingNavBarItem(
 	val badgeCount: Int = 0,
 )
 
+@Immutable
 data class FloatingNavBarColors(
 	val container: Int,
 	val selectedContainer: Int,
@@ -970,6 +974,8 @@ fun FloatingNavBar(
 							.matchParentSize()
 							.background(color = barColor, shape = BarShape),
 					)
+					val density = LocalDensity.current
+					val magBorderStroke = remember(density) { Stroke(width = with(density) { 1.dp.toPx() }) }
 					Row(
 						modifier = Modifier
 							.heightIn(min = 64.dp)
@@ -1092,7 +1098,7 @@ fun FloatingNavBar(
 										topLeft = Offset(pillLeft, pillTop),
 										size = Size(pillWidth, pillHeight),
 										cornerRadius = cornerRadius,
-										style = Stroke(width = 1.dp.toPx()),
+										style = magBorderStroke,
 									)
 								}
 							}
@@ -1307,15 +1313,19 @@ private fun FloatingNavItem(
 					shrinkTowards = Alignment.Start,
 				) + fadeOut(animationSpec = LabelFadeOutSpec),
 			) {
+				val baseLabelStyle = LocalTextStyle.current
+				val labelStyle = remember(baseLabelStyle) {
+					baseLabelStyle.merge(
+						fontSize = 14.sp,
+						lineHeight = 20.sp,
+						fontWeight = FontWeight.Bold,
+					)
+				}
 				// BasicText's color lambda is read at draw time, so the label recolors without recomposing.
 				BasicText(
 					text = title,
 					color = { contentColor() },
-					style = LocalTextStyle.current.merge(
-						fontSize = 14.sp,
-						lineHeight = 20.sp,
-						fontWeight = FontWeight.Bold,
-					),
+					style = labelStyle,
 					maxLines = 1,
 					modifier = Modifier.padding(start = 8.dp),
 				)

@@ -25,8 +25,13 @@ fun mangaListItemAD(
 		}
 	}
 
-	bind {
-		itemView.setTooltipCompat(item.getSummary(context))
+	var lastTooltipId = Long.MIN_VALUE
+
+	bind { payloads ->
+		if (lastTooltipId != item.id || payloads.isEmpty()) {
+			lastTooltipId = item.id
+			itemView.setTooltipCompat(item.getSummary(context))
+		}
 		binding.textViewTitle.text = item.title
 		binding.textViewSubtitle.textAndVisible = item.subtitle
 		binding.imageViewPin.isVisible = item.isPinned

@@ -24,6 +24,8 @@ class HideBottomNavigationOnScrollBehavior @JvmOverloads constructor(
 	private var offsetAnimator: ValueAnimator? = null
 
 	private var dyRatio = 1F
+	private var lastAppBarHeight = -1
+	private var lastChildHeight = -1
 
 	var isPinned: Boolean = false
 		set(value) {
@@ -43,11 +45,16 @@ class HideBottomNavigationOnScrollBehavior @JvmOverloads constructor(
 		child: NavigationBarView,
 		dependency: View,
 	): Boolean {
-		val appBarSize = dependency.measureHeight()
-		dyRatio = if (appBarSize > 0) {
-			child.measureHeight().toFloat() / appBarSize
-		} else {
-			1F
+		val appBarSize = dependency.height.takeIf { it > 0 } ?: dependency.measureHeight()
+		val childSize = child.height.takeIf { it > 0 } ?: child.measureHeight()
+		if (appBarSize != lastAppBarHeight || childSize != lastChildHeight) {
+			lastAppBarHeight = appBarSize
+			lastChildHeight = childSize
+			dyRatio = if (appBarSize > 0) {
+				childSize.toFloat() / appBarSize
+			} else {
+				1F
+			}
 		}
 		return false
 	}
@@ -78,8 +85,11 @@ class HideBottomNavigationOnScrollBehavior @JvmOverloads constructor(
 		type: Int,
 	) {
 		super.onNestedPreScroll(coordinatorLayout, child, target, dx, dy, consumed, type)
-		if (!isPinned) {
-			child.translationY = (child.translationY + (dy * dyRatio)).coerceIn(0F, child.height.toFloat())
+		if (!isPinned && dy != 0) {
+			val newY = (child.translationY + (dy * dyRatio)).coerceIn(0F, child.height.toFloat())
+			if (newY != child.translationY) {
+				child.translationY = newY
+			}
 		}
 	}
 
@@ -96,17 +106,22 @@ class HideBottomNavigationOnScrollBehavior @JvmOverloads constructor(
 
 	private fun animateBottomNavigationVisibility(child: NavigationBarView, isVisible: Boolean) {
 		offsetAnimator?.cancel()
-		offsetAnimator = ValueAnimator().apply {
-			interpolator = DecelerateInterpolator()
+		val targetY = if (isVisible) 0F else child.height.toFloat()
+		if (child.translationY == targetY) {
+			offsetAnimator = null
+			return
+		}
+		offsetAnimator = ValueAnimator.ofFloat(child.translationY, targetY).apply {
+			interpolator = DECELERATE_INTERPOLATOR
 			duration = child.context.getAnimationDuration(R.integer.config_shorterAnimTime)
 			addUpdateListener {
 				child.translationY = it.animatedValue as Float
 			}
+			start()
 		}
-		offsetAnimator?.setFloatValues(
-			child.translationY,
-			if (isVisible) 0F else child.height.toFloat(),
-		)
-		offsetAnimator?.start()
+	}
+
+	private companion object {
+		val DECELERATE_INTERPOLATOR = DecelerateInterpolator()
 	}
 }

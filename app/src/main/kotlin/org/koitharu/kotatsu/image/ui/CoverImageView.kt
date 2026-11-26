@@ -13,6 +13,7 @@ import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
 import coil3.network.HttpException
+import coil3.request.Disposable
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -63,6 +64,8 @@ class CoverImageView @JvmOverloads constructor(
 	private val hasAspectRatio: Boolean
 		get() = aspectRationHeight > 0 && aspectRationWidth > 0
 
+	private val coverSizeResolver by lazy(LazyThreadSafetyMode.NONE) { CoverSizeResolver(this) }
+
 	init {
 		context.withStyledAttributes(attrs, R.styleable.CoverImageView, defStyleAttr) {
 			aspectRationHeight = getInt(R.styleable.CoverImageView_aspectRationHeight, aspectRationHeight)
@@ -108,63 +111,84 @@ class CoverImageView @JvmOverloads constructor(
 
 	private fun isAnimatedUrl(url: String?): Boolean = url?.isAnimatedImage() == true
 
-	override fun setImageAsync(page: ReaderPage) = enqueueRequest(
-		newRequestBuilder(applyTrim = true)
-			.data(page.toMangaPage())
-			.mangaSourceExtra(page.source)
-			.build(),
-	)
+	override fun setImageAsync(page: ReaderPage): Disposable {
+		val mangaPage = page.toMangaPage()
+		reuseCurrentRequestIfSame(mangaPage)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = true)
+				.data(mangaPage)
+				.mangaSourceExtra(page.source)
+				.build(),
+		)
+	}
 
-	fun setImageAsync(page: MangaPage) = enqueueRequest(
-		newRequestBuilder(applyTrim = true)
-			.data(page)
-			.mangaSourceExtra(page.source)
-			.build(),
-	)
+	fun setImageAsync(page: MangaPage): Disposable {
+		reuseCurrentRequestIfSame(page)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = true)
+				.data(page)
+				.mangaSourceExtra(page.source)
+				.build(),
+		)
+	}
 
-	fun setImageAsync(cover: Cover?) = enqueueRequest(
-		newRequestBuilder(applyTrim = !isAnimatedUrl(cover?.url))
-			.data(cover?.url)
-			.mangaSourceExtra(cover?.mangaSource)
-			.build(),
-	)
+	fun setImageAsync(cover: Cover?): Disposable {
+		val url = cover?.url
+		reuseCurrentRequestIfSame(url)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = !isAnimatedUrl(url))
+				.data(url)
+				.mangaSourceExtra(cover?.mangaSource)
+				.build(),
+		)
+	}
 
 	fun setImageAsync(
 		coverUrl: String?,
 		manga: Manga?,
-	) = enqueueRequest(
-		newRequestBuilder(applyTrim = !isAnimatedUrl(coverUrl))
-			.data(coverUrl)
-			.mangaExtra(manga)
-			.build(),
-	)
+	): Disposable {
+		reuseCurrentRequestIfSame(coverUrl)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = !isAnimatedUrl(coverUrl))
+				.data(coverUrl)
+				.mangaExtra(manga)
+				.build(),
+		)
+	}
 
 	fun setImageAsync(
 		coverUrl: String?,
 		source: MangaSource,
-	) = enqueueRequest(
-		newRequestBuilder(applyTrim = !isAnimatedUrl(coverUrl))
-			.data(coverUrl)
-			.mangaSourceExtra(source)
-			.build(),
-	)
+	): Disposable {
+		reuseCurrentRequestIfSame(coverUrl)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = !isAnimatedUrl(coverUrl))
+				.data(coverUrl)
+				.mangaSourceExtra(source)
+				.build(),
+		)
+	}
 
 	fun setImageAsync(
 		bookmark: Bookmark
-	) = enqueueRequest(
-		newRequestBuilder(applyTrim = true)
-			.data(bookmark.toMangaPage())
-			.decodeRegion(bookmark.scroll)
-			.bookmarkExtra(bookmark)
-			.build(),
-	)
+	): Disposable {
+		val page = bookmark.toMangaPage()
+		reuseCurrentRequestIfSame(page)?.let { return it }
+		return enqueueRequest(
+			newRequestBuilder(applyTrim = true)
+				.data(page)
+				.decodeRegion(bookmark.scroll)
+				.bookmarkExtra(bookmark)
+				.build(),
+		)
+	}
 
 	private fun newRequestBuilder(applyTrim: Boolean) = super.newRequestBuilder().apply {
 		if (trimImage && applyTrim) {
-			transformations(listOf(TrimTransformation()))
+			transformations(TRIM_TRANSFORMATIONS)
 		}
 		if (hasAspectRatio) {
-			size(CoverSizeResolver(this@CoverImageView))
+			size(coverSizeResolver)
 		}
 	}
 
@@ -308,5 +332,9 @@ class CoverImageView @JvmOverloads constructor(
 				view.viewTreeObserver.removeOnPreDrawListener(victim)
 			}
 		}
+	}
+
+	private companion object {
+		val TRIM_TRANSFORMATIONS = listOf(TrimTransformation())
 	}
 }

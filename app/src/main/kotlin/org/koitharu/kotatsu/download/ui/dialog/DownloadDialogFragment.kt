@@ -37,7 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
@@ -105,12 +105,19 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 		}
 		val summary = remember { viewModel.manga.joinToStringWithLimit(context, 120) { it.title } }
 		val formatLabels = stringArrayResource(R.array.download_formats)
+		val formatItems = remember(formatLabels) { formatLabels.toList() }
 
-		val optionEntries = buildList {
-			add(OPTION_WHOLE_MANGA)
-			if (options.wholeBranch != null) add(OPTION_WHOLE_BRANCH)
-			if (options.firstChapters != null) add(OPTION_FIRST_CHAPTERS)
-			if (options.unreadChapters != null) add(OPTION_UNREAD_CHAPTERS)
+		val optionEntries = remember(
+			options.wholeBranch != null,
+			options.firstChapters != null,
+			options.unreadChapters != null,
+		) {
+			buildList(4) {
+				add(OPTION_WHOLE_MANGA)
+				if (options.wholeBranch != null) add(OPTION_WHOLE_BRANCH)
+				if (options.firstChapters != null) add(OPTION_FIRST_CHAPTERS)
+				if (options.unreadChapters != null) add(OPTION_UNREAD_CHAPTERS)
+			}
 		}
 
 		ExpressiveDialogCard(
@@ -156,7 +163,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 						)
 
 						OPTION_WHOLE_BRANCH -> options.wholeBranch?.let { branch ->
-							val keys = branch.branches.keys.toList()
+							val keys = remember(branch.branches) { branch.branches.keys.toList() }
 							OptionRow(
 								index = index,
 								count = optionEntries.size,
@@ -173,7 +180,8 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 						}
 
 						OPTION_FIRST_CHAPTERS -> options.firstChapters?.let { first ->
-							val values = chaptersCount(first.maxAvailableCount).toList()
+							val values = remember(first.maxAvailableCount) { chaptersCount(first.maxAvailableCount).toList() }
+							val formattedValues = remember(values) { values.map { it.format() } }
 							OptionRow(
 								index = index,
 								count = optionEntries.size,
@@ -188,14 +196,18 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 								),
 								subtitle = first.branch,
 								selectorLabel = first.chaptersCount.format(),
-								selectorItems = values.map { it.format() },
+								selectorItems = formattedValues,
 								onSelectItem = { values.getOrNull(it)?.let(viewModel::setFirstChaptersCount) },
 								onSelect = { selectedOption = OPTION_FIRST_CHAPTERS },
 							)
 						}
 
 						OPTION_UNREAD_CHAPTERS -> options.unreadChapters?.let { unread ->
-							val values = chaptersCount(unread.maxAvailableCount).toList()
+							val values = remember(unread.maxAvailableCount) { chaptersCount(unread.maxAvailableCount).toList() }
+							val allChaptersLabel = stringResource(R.string.chapters_all)
+							val formattedValues = remember(values, allChaptersLabel) {
+								values.map { it.format() } + allChaptersLabel
+							}
 							OptionRow(
 								index = index,
 								count = optionEntries.size,
@@ -214,11 +226,11 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 								},
 								subtitle = null,
 								selectorLabel = if (unread.chaptersCount == Int.MAX_VALUE) {
-									stringResource(R.string.chapters_all)
+									allChaptersLabel
 								} else {
 									unread.chaptersCount.format()
 								},
-								selectorItems = values.map { it.format() } + stringResource(R.string.chapters_all),
+								selectorItems = formattedValues,
 								onSelectItem = {
 									viewModel.setUnreadChaptersCount(values.getOrNull(it) ?: Int.MAX_VALUE)
 								},
@@ -300,6 +312,10 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 							color = colors.primary,
 							modifier = Modifier.weight(1f),
 						)
+						val chevronRotation = animateFloatAsState(
+							targetValue = if (moreExpanded) 180f else 0f,
+							label = "moreOptionsExpand",
+						)
 						Icon(
 							painter = painterResource(R.drawable.ic_expand_more),
 							contentDescription = null,
@@ -307,12 +323,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 							modifier = Modifier
 								.padding(start = 8.dp)
 								.size(24.dp)
-								.rotate(
-									animateFloatAsState(
-										targetValue = if (moreExpanded) 180f else 0f,
-										label = "moreOptionsExpand",
-									).value,
-								),
+								.graphicsLayer { rotationZ = chevronRotation.value },
 						)
 					}
 					if (moreExpanded) {
@@ -334,7 +345,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 							SelectorField(
 								label = stringResource(R.string.preferred_download_format),
 								current = formatLabels.getOrNull(formatIndex) ?: "",
-								items = formatLabels.toList(),
+								items = formatItems,
 								onSelect = { formatIndex = it },
 							)
 						}

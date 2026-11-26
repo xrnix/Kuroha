@@ -15,15 +15,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.ContentScale
@@ -52,6 +53,7 @@ import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
  * Navigation/action hooks for the expressive details screen. The activity owns the router
  * and supplies these so the Compose layer stays free of Android navigation plumbing.
  */
+@Immutable
 class DetailsExpressiveActions(
 	val onCoverClick: (Manga) -> Unit,
 	val onTitleClick: (String) -> Unit,
@@ -236,20 +238,27 @@ fun DetailsExpressiveScreen(
  * Drawn from the dock's own bounds and deliberately spills past them — a round falloff has no
  * visible edge, unlike a rectangular scrim.
  */
-internal fun Modifier.dockGlow(surface: Color) = drawBehind {
+internal fun Modifier.dockGlow(surface: Color) = drawWithCache {
 	val rx = size.width * 0.62f
 	val ry = size.height * 0.60f
+	if (rx <= 0f || ry <= 0f) {
+		return@drawWithCache onDrawBehind {}
+	}
+	val centerOffset = Offset(size.width * 0.5f, size.height * 0.5f)
 	val brush = Brush.radialGradient(
 		0f to surface.copy(alpha = 0.92f),
 		0.40f to surface.copy(alpha = 0.74f),
 		0.72f to surface.copy(alpha = 0.32f),
 		1f to Color.Transparent,
-		center = center,
+		center = centerOffset,
 		radius = rx,
 	)
-	// Squash the circle into an ellipse so the halo hugs the (wide, short) dock instead of ballooning.
-	scale(scaleX = 1f, scaleY = ry / rx, pivot = center) {
-		drawCircle(brush = brush, radius = rx, center = center)
+	val scaleY = ry / rx
+	onDrawBehind {
+		// Squash the circle into an ellipse so the halo hugs the (wide, short) dock instead of ballooning.
+		scale(scaleX = 1f, scaleY = scaleY, pivot = centerOffset) {
+			drawCircle(brush = brush, radius = rx, center = centerOffset)
+		}
 	}
 }
 
@@ -295,17 +304,18 @@ private fun ExpressiveBackdrop(
 				.fillMaxSize()
 				.then(blurMod),
 		)
+		val scrimBrush = remember(surface) {
+			Brush.verticalGradient(
+				0f to surface.copy(alpha = 0.30f),
+				0.4f to surface.copy(alpha = 0.55f),
+				0.78f to surface.copy(alpha = 0.94f),
+				1f to surface,
+			)
+		}
 		Box(
 			modifier = Modifier
 				.fillMaxSize()
-				.background(
-					Brush.verticalGradient(
-						0f to surface.copy(alpha = 0.30f),
-						0.4f to surface.copy(alpha = 0.55f),
-						0.78f to surface.copy(alpha = 0.94f),
-						1f to surface,
-					),
-				),
+				.background(scrimBrush),
 		)
 	}
 }
