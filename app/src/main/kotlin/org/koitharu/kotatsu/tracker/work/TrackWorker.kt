@@ -260,7 +260,7 @@ class TrackWorker @AssistedInject constructor(
 		}
 	}
 
-	private fun createWorkerNotification(max: Int, progress: Int) = NotificationCompat.Builder(
+	private fun createWorkerNotification(max: Int, progress: Int): android.app.Notification = NotificationCompat.Builder(
 		applicationContext,
 		WORKER_CHANNEL_ID,
 	).apply {

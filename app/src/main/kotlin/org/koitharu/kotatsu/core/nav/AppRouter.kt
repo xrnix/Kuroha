@@ -83,7 +83,7 @@ import org.koitharu.kotatsu.main.ui.welcome.WelcomeSheet
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.MangaPage
-import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.ellipsize
@@ -223,6 +223,8 @@ class AppRouter private constructor(
     }
 
     fun openSourcesCatalog() = startActivity(SourcesCatalogActivity::class.java)
+
+    fun openExtensionStores() = startActivity(org.koitharu.kotatsu.settings.sources.catalog.stores.ExtensionStoresActivity::class.java)
 
     fun openDownloads() = startActivity(DownloadsActivity::class.java)
 
@@ -883,6 +885,7 @@ class AppRouter private constructor(
         const val KEY_READER_MODE = "reader_mode"
         const val KEY_SORT_ORDER = "sort_order"
         const val KEY_SOURCE = "source"
+        const val KEY_SOURCE_CATALOG_AUTO_MIGRATE = "source_catalog_auto_migrate"
         const val KEY_TAB = "tab"
         const val KEY_TITLE = "title"
         const val KEY_URL = "url"

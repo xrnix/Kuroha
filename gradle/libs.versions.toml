@@ -36,6 +36,13 @@ jxlCoder = "2.6.1"
 kotlin = "2.2.10"
 kizzyRpc = "ad8f2e32eb"
 ksp = "2.2.10-2.0.2"
+injekt = "4135455a2a"
+jsoup = "1.23.2"
+quickJs = "547f5b1597"
+rxjava = "1.3.8"
+shizuku = "13.1.5"
+unifile = "a9de196cc7"
+xmlutil = "1.0.2"
 leakcanary = "3.0-alpha-8"
 lifecycle = "2.9.4"
 markwon = "4.6.2"
@@ -112,7 +119,9 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "dagge
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "dagger" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "dagger" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "dagger" }
+injekt-core = { module = "com.github.null2264.injekt:injekt-core", version.ref = "injekt" }
 json = { module = "org.json:json", version.ref = "json" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 junit = { module = "junit:junit", version.ref = "junit" }
 jxl-coder = { module = "io.github.awxkee:jxl-coder", version.ref = "jxlCoder" }
 kizzyrpc = { module = "com.github.dead8309:KizzyRPC", version.ref = "kizzyRpc" }
@@ -121,6 +130,15 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 kotlinx-coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm", version.ref = "serialization" }
+kotlinx-serialization-json-okio = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-okio", version.ref = "serialization" }
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "serialization" }
+quickJs = { module = "com.github.zhanghai.quickjs-java:quickjs-android", version.ref = "quickJs" }
+rxjava = { module = "io.reactivex:rxjava", version.ref = "rxjava" }
+shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
+shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
+unifile = { module = "com.github.tachiyomiorg:unifile", version.ref = "unifile" }
+xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core-android", version.ref = "xmlutil" }
+xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }

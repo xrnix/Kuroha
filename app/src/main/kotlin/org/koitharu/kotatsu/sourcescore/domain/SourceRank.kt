@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.sourcescore.domain
 
 import org.koitharu.kotatsu.sourcescore.data.SourceScoreEntity
 import org.koitharu.kotatsu.sourcescore.data.SourceStatsEntity
+import org.koitharu.kotatsu.sourcescore.data.total
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt

@@ -597,7 +597,7 @@ class SuggestionsWorker @AssistedInject constructor(
 		const val SETTINGS_ACTION_CODE = 4
 
 		// Popularity last: it hands back the same best-sellers whatever the reader likes
-		val preferredSortOrders = listOf(
+		val preferredSortOrders: List<org.koitharu.kotatsu.parsers.model.SortOrder> = listOf(
 			SortOrder.UPDATED,
 			SortOrder.NEWEST,
 			SortOrder.RATING,

@@ -50,7 +50,6 @@ import org.koitharu.kotatsu.local.ui.LocalListFragment
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
-import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.remotelist.ui.RemoteListFragment
 import kotlin.math.absoluteValue

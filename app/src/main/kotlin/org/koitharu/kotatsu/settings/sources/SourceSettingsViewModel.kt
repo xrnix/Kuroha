@@ -1,12 +1,15 @@
 package org.koitharu.kotatsu.settings.sources
 
+import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -14,14 +17,23 @@ import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
+import org.koitharu.kotatsu.mihon.MihonExtensionLoader
+import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.mihon.MihonMangaRepository
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
+import org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage
 import org.koitharu.kotatsu.parsers.MangaParserAuthProvider
 import org.koitharu.kotatsu.parsers.exception.AuthRequiredException
+import org.koitharu.kotatsu.settings.sources.catalog.ExtensionInstallMode
+import org.koitharu.kotatsu.settings.sources.catalog.ExtensionStoreManager
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,17 +42,24 @@ class SourceSettingsViewModel @Inject constructor(
 	mangaRepositoryFactory: MangaRepository.Factory,
 	private val cookieJar: MutableCookieJar,
 	private val mangaSourcesRepository: MangaSourcesRepository,
+	private val settings: AppSettings,
+	private val mihonExtensionManager: MihonExtensionManager,
+	private val storeManager: ExtensionStoreManager,
+	@ApplicationContext private val context: Context,
 ) : BaseViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
 
 	val source = MangaSource(savedStateHandle.get<String>(AppRouter.KEY_SOURCE))
 	val repository = mangaRepositoryFactory.create(source)
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
+	val onPluginDeleted = MutableEventFlow<Unit>()
 	val username = MutableStateFlow<String?>(null)
 	val isAuthorized = MutableStateFlow<Boolean?>(null)
 	val browserUrl = MutableStateFlow<String?>(null)
 	val isEnabled = mangaSourcesRepository.observeIsEnabled(source)
 	private var usernameLoadJob: Job? = null
+
+	val mihonSource: MihonMangaSource? = (repository as? MihonMangaRepository)?.source
 
 	init {
 		when (repository) {
@@ -48,6 +67,9 @@ class SourceSettingsViewModel @Inject constructor(
 				browserUrl.value = "https://${repository.domain}"
 				repository.getConfig().subscribe(this)
 				loadUsername(repository.getAuthProvider())
+			}
+			is MihonMangaRepository -> {
+				browserUrl.value = (repository.source.catalogueSource as? eu.kanade.tachiyomi.source.online.HttpSource)?.baseUrl
 			}
 		}
 	}
@@ -80,22 +102,54 @@ class SourceSettingsViewModel @Inject constructor(
 		}
 	}
 
-	fun clearCookies() {
-		if (repository !is ParserMangaRepository) return
+	fun clearCookies(targetUrl: String? = null) {
+		val url = when {
+			targetUrl != null -> targetUrl.toHttpUrlOrNull()
+			repository is ParserMangaRepository -> HttpUrl.Builder().scheme("https").host(repository.domain).build()
+			repository is MihonMangaRepository -> (repository.source.catalogueSource as? eu.kanade.tachiyomi.source.online.HttpSource)?.baseUrl?.toHttpUrlOrNull()
+			else -> null
+		} ?: return
 		launchLoadingJob(Dispatchers.Default) {
-			val url = HttpUrl.Builder()
-				.scheme("https")
-				.host(repository.domain)
-				.build()
 			cookieJar.removeCookies(url, null)
 			onActionDone.call(ReversibleAction(R.string.cookies_cleared, null))
-			loadUsername(repository.getAuthProvider())
+			if (repository is ParserMangaRepository) {
+				loadUsername(repository.getAuthProvider())
+			}
 		}
 	}
 
 	fun setEnabled(value: Boolean) {
 		launchJob(Dispatchers.Default) {
 			mangaSourcesRepository.setSourcesEnabled(setOf(source), value)
+		}
+	}
+
+	fun getSiblingMihonSources(): List<MihonMangaSource> {
+		val src = mihonSource ?: return emptyList()
+		return mihonExtensionManager.getMihonMangaSources()
+			.filter { it.pkgName == src.pkgName && it.catalogueSource.name == src.catalogueSource.name }
+	}
+
+	fun getActiveLanguage(siblings: List<MihonMangaSource>): String? {
+		val src = mihonSource ?: return null
+		val stored = settings.getMihonActiveLang(src.pkgName, src.catalogueSource.name)
+		return resolveActiveMihonLanguage(siblings.map { it.language }, stored, Locale.getDefault().language)
+	}
+
+	fun setActiveLanguage(language: String) {
+		val src = mihonSource ?: return
+		settings.setMihonActiveLang(src.pkgName, src.catalogueSource.name, language)
+	}
+
+	val isSandboxInstall: Boolean
+		get() = settings.isPrivateInstallEnabled
+
+	fun deleteSandboxExtension(pkgName: String) {
+		launchJob(Dispatchers.Default) {
+			MihonExtensionLoader.uninstallPrivateExtension(context, pkgName)
+			storeManager.removeOwner(ExtensionInstallMode.SANDBOX, pkgName)
+			mihonExtensionManager.loadExtensions()
+			onPluginDeleted.call(Unit)
 		}
 	}
 

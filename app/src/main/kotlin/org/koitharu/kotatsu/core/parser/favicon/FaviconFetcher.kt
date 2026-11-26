@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.core.parser.favicon
 
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
@@ -39,6 +40,10 @@ import org.koitharu.kotatsu.core.util.ext.toMimeTypeOrNull
 import org.koitharu.kotatsu.local.data.FaviconCache
 import org.koitharu.kotatsu.local.data.LocalMangaRepository
 import org.koitharu.kotatsu.local.data.LocalStorageCache
+import org.koitharu.kotatsu.mihon.MihonExtensionLoader
+import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.mihon.MihonMangaRepository
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import java.io.File
 import javax.inject.Inject
@@ -50,23 +55,45 @@ class FaviconFetcher(
 	private val imageLoader: ImageLoader,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val localStorageCache: LocalStorageCache,
+	private val mihonExtensionManager: MihonExtensionManager,
 ) : Fetcher {
 
 	override suspend fun fetch(): FetchResult? {
-		val mangaSource = MangaSource(uri.schemeSpecificPart)
+		val ssp = uri.schemeSpecificPart
+		if (ssp.startsWith(FAVICON_PACKAGE_PREFIX)) {
+			return fetchPackageIcon(ssp.removePrefix(FAVICON_PACKAGE_PREFIX))
+		}
+		resolveMihonSource(ssp)?.let { return fetchMihonIcon(it) }
+
+		val mangaSource = MangaSource(ssp)
 
 		return when (val repo = mangaRepositoryFactory.create(mangaSource)) {
 			is ParserMangaRepository -> fetchParserFavicon(repo)
+			is MihonMangaRepository -> fetchMihonIcon(repo)
 			is ExternalMangaRepository -> fetchPluginIcon(repo)
-			is EmptyMangaRepository -> ImageFetchResult(
-				image = ColorImage(Color.WHITE),
-				isSampled = false,
-				dataSource = DataSource.MEMORY,
-			)
+			is EmptyMangaRepository -> {
+				val resolvedMihon = resolveMihonSource(mangaSource.name)
+				if (resolvedMihon != null) {
+					fetchMihonIcon(resolvedMihon)
+				} else {
+					ImageFetchResult(
+						image = ColorImage(Color.WHITE),
+						isSampled = false,
+						dataSource = DataSource.MEMORY,
+					)
+				}
+			}
 
 			is LocalMangaRepository -> imageLoader.fetch(R.drawable.ic_storage, options)
 
-			else -> throw IllegalArgumentException("Unsupported repo ${repo.javaClass.simpleName}")
+			else -> {
+				val resolvedMihon = resolveMihonSource(mangaSource.name)
+				if (resolvedMihon != null) {
+					fetchMihonIcon(resolvedMihon)
+				} else {
+					imageLoader.fetch(R.drawable.ic_manga_source, options)
+				}
+			}
 		}
 	}
 
@@ -125,6 +152,50 @@ class FaviconFetcher(
 		)
 	}
 
+	private suspend fun fetchMihonIcon(repository: MihonMangaRepository): FetchResult =
+		fetchMihonIcon(repository.source)
+
+	private suspend fun fetchMihonIcon(source: MihonMangaSource): FetchResult = fetchPackageIcon(source.pkgName)
+
+	private suspend fun fetchPackageIcon(pkgName: String): FetchResult {
+		val icon = runCatchingCancellable {
+			runInterruptible {
+				options.context.packageManager.getApplicationIcon(pkgName)
+			}
+		}.getOrNull() ?: runCatchingCancellable {
+			runInterruptible {
+				val ctx = options.context
+				val extFile = File(MihonExtensionLoader.getPrivateExtensionDir(ctx), "$pkgName.ext")
+				if (!extFile.isFile) return@runInterruptible null
+				val pm = ctx.packageManager
+				@Suppress("DEPRECATION")
+				val pkgInfo = pm.getPackageArchiveInfo(extFile.absolutePath, PackageManager.GET_META_DATA) ?: return@runInterruptible null
+				val appInfo = pkgInfo.applicationInfo ?: return@runInterruptible null
+				if (appInfo.sourceDir == null) appInfo.sourceDir = extFile.absolutePath
+				if (appInfo.publicSourceDir == null) appInfo.publicSourceDir = extFile.absolutePath
+				appInfo.loadIcon(pm)
+			}
+		}.getOrNull() ?: return requireNotNull(imageLoader.fetch(R.drawable.ic_manga_source, options))
+
+		return ImageFetchResult(
+			image = icon.nonAdaptive().asImage(),
+			isSampled = false,
+			dataSource = DataSource.DISK,
+		)
+	}
+
+	private suspend fun resolveMihonSource(name: String): MihonMangaSource? {
+		if (!name.startsWith("MIHON_")) return null
+		mihonExtensionManager.ensureReady()
+		val sourceId = name.removePrefix("MIHON_").substringBefore(':').toLongOrNull()
+		val existing = sourceId?.let { mihonExtensionManager.getMihonMangaSourceById(it) }
+			?: mihonExtensionManager.getMihonMangaSourceByName(name)
+		if (existing != null) return existing
+		mihonExtensionManager.ensureReady(forceRefresh = true)
+		return sourceId?.let { mihonExtensionManager.getMihonMangaSourceById(it) }
+			?: mihonExtensionManager.getMihonMangaSourceByName(name)
+	}
+
 	private suspend fun writeToCache(key: String, result: FetchResult): FetchResult = runCatchingCancellable {
 		when (result) {
 			is ImageFetchResult -> {
@@ -158,6 +229,7 @@ class FaviconFetcher(
 	class Factory @Inject constructor(
 		private val mangaRepositoryFactory: MangaRepository.Factory,
 		@FaviconCache private val faviconCache: LocalStorageCache,
+		private val mihonExtensionManager: MihonExtensionManager,
 	) : Fetcher.Factory<CoilUri> {
 
 		override fun create(
@@ -165,7 +237,14 @@ class FaviconFetcher(
 			options: Options,
 			imageLoader: ImageLoader
 		): Fetcher? = if (data.scheme == URI_SCHEME_FAVICON) {
-			FaviconFetcher(data.toAndroidUri(), options, imageLoader, mangaRepositoryFactory, faviconCache)
+			FaviconFetcher(
+				uri = data.toAndroidUri(),
+				options = options,
+				imageLoader = imageLoader,
+				mangaRepositoryFactory = mangaRepositoryFactory,
+				localStorageCache = faviconCache,
+				mihonExtensionManager = mihonExtensionManager,
+			)
 		} else {
 			null
 		}

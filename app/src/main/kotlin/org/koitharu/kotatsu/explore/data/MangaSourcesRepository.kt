@@ -32,11 +32,17 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsFlow
 import org.koitharu.kotatsu.core.ui.util.ReversibleHandle
 import org.koitharu.kotatsu.core.util.ext.flattenLatest
+import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
-import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
 import org.koitharu.kotatsu.parsers.util.mapNotNullToSet
+import android.content.SharedPreferences
+import androidx.core.os.ConfigurationCompat
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.koitharu.kotatsu.core.model.unwrap
+import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.sourcescore.domain.SourceRanker
@@ -44,11 +50,17 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ResolvedSource(
+	val source: MangaSource,
+	val languageSubtitle: String?,
+)
+
 @Singleton
 class MangaSourcesRepository @Inject constructor(
 	@LocalizedAppContext private val context: Context,
 	private val db: MangaDatabase,
 	private val settings: AppSettings,
+	private val mihonExtensionManagerProvider: javax.inject.Provider<MihonExtensionManager>,
 	/**
 	 * Nullable with a default so [org.koitharu.kotatsu.backups.domain.AppBackupAgent] can keep
 	 * constructing this by hand: a backup agent runs in its own process with no Hilt graph, and it
@@ -56,6 +68,21 @@ class MangaSourcesRepository @Inject constructor(
 	 */
 	private val sourceRanker: SourceRanker? = null,
 ) {
+
+	private val mihonExtensionManager: MihonExtensionManager?
+		get() = runCatching { mihonExtensionManagerProvider.get() }.getOrNull()
+
+	constructor(
+		context: Context,
+		db: MangaDatabase,
+		settings: AppSettings,
+	) : this(
+		context = context,
+		db = db,
+		settings = settings,
+		mihonExtensionManagerProvider = javax.inject.Provider { MihonExtensionManager.getInstance() },
+		sourceRanker = null,
+	)
 
 	/** The [ActiveParsers.generation] whose sources the table has been brought up to. */
 	private val assimilatedGeneration = AtomicInteger(-1)
@@ -69,27 +96,32 @@ class MangaSourcesRepository @Inject constructor(
 	suspend fun getEnabledSources(): List<MangaSource> {
 		assimilateNewSources()
 		val order = settings.sourcesSortOrder
-		return dao.findAll(!settings.isAllSourcesEnabled, order).toSources(settings.isNsfwContentDisabled, order)
-			.let { enabled ->
-				val external = getExternalSources()
-				val list = ArrayList<MangaSourceInfo>(enabled.size + external.size)
-				external.mapTo(list) { MangaSourceInfo(it, isEnabled = true, isPinned = true) }
-				list.addAll(enabled)
-				list
-			}
+		val enabledNative = dao.findAll(!settings.isAllSourcesEnabled, order).toSources(settings.isNsfwContentDisabled, order)
+		val external = getExternalSources()
+		val mihon = getMihonSources()
+		val list = ArrayList<MangaSource>(enabledNative.size + external.size + mihon.size)
+		external.forEach { list.add(it) }
+		list.addAll(mihon)
+		enabledNative.forEach { list.add(it.mangaSource) }
+		return list
 	}
 
 	suspend fun getPinnedSources(): Set<MangaSource> {
 		assimilateNewSources()
 		val skipNsfw = settings.isNsfwContentDisabled
-		return dao.findAllPinned().mapNotNullToSet {
+		val nativePinned = dao.findAllPinned().mapNotNullToSet {
 			it.source.toMangaSourceOrNull()?.takeUnless { x -> skipNsfw && x.isNsfw() }
 		}
+		val mihonPinned = getMihonSources().filter { sourceKeyOf(it) in getPinnedSourceKeys() }
+		return nativePinned + mihonPinned
 	}
 
 	suspend fun getTopSources(limit: Int): List<MangaSource> {
 		assimilateNewSources()
-		return dao.findLastUsed(limit).toSources(settings.isNsfwContentDisabled, null)
+		val nativeTop = dao.findLastUsed(limit).toSources(settings.isNsfwContentDisabled, null).map { it.mangaSource }
+		val mihonTop = getMihonSources().filter { usagePrefs.getLong(sourceKeyOf(it), 0L) > 0L }
+			.sortedByDescending { usagePrefs.getLong(sourceKeyOf(it), 0L) }
+		return (mihonTop + nativeTop).take(limit)
 	}
 
 	suspend fun getDisabledSources(): Set<MangaSource> {
@@ -194,8 +226,12 @@ class MangaSourcesRepository @Inject constructor(
 	}.flattenLatest()
 		.onStart { assimilateNewSources() }
 		.combine(observeExternalSources()) { enabled, external ->
-			val list = ArrayList<MangaSourceInfo>(enabled.size + external.size)
+			enabled to external
+		}.combine(observeMihonSources()) { (enabled, external), mihonSources ->
+			val mihonInfos = buildMihonSourceInfoList(mihonSources)
+			val list = ArrayList<MangaSourceInfo>(enabled.size + external.size + mihonInfos.size)
 			external.mapTo(list) { MangaSourceInfo(it, isEnabled = true, isPinned = true) }
+			list.addAll(mihonInfos)
 			list.addAll(enabled)
 			list
 		}
@@ -203,8 +239,12 @@ class MangaSourcesRepository @Inject constructor(
 	fun observeAll(): Flow<List<Pair<MangaSource, Boolean>>> = combine(
 		dao.observeAll(),
 		observeParsers(),
-	) { entities, _ ->
-		val result = ArrayList<Pair<MangaSource, Boolean>>(entities.size)
+		observeMihonSources(),
+	) { entities, _, mihonSources ->
+		val result = ArrayList<Pair<MangaSource, Boolean>>(entities.size + mihonSources.size)
+		for (source in mihonSources) {
+			result.add(source to true)
+		}
 		for (entity in entities) {
 			val source = entity.source.toMangaSourceOrNull() ?: continue
 			if (source in allMangaSources) {
@@ -323,14 +363,9 @@ class MangaSourcesRepository @Inject constructor(
 		return settings.sourcesVersion == 0 && dao.findAllEnabledNames().isEmpty()
 	}
 
-	suspend fun setIsPinned(sources: Collection<MangaSource>, isPinned: Boolean): ReversibleHandle {
-		setSourcesPinnedImpl(sources, isPinned)
-		return ReversibleHandle {
-			setSourcesEnabledImpl(sources, !isPinned)
-		}
-	}
-
 	suspend fun trackUsage(source: MangaSource) {
+		val key = sourceKeyOf(source)
+		usagePrefs.edit().putLong(key, System.currentTimeMillis()).apply()
 		if (!settings.isIncognitoModeEnabled(source.isNsfw())) {
 			dao.setLastUsed(source.name, System.currentTimeMillis())
 		}
@@ -488,6 +523,170 @@ class MangaSourcesRepository @Inject constructor(
 
 	private fun observeAllEnabled() = settings.observeAsFlow(AppSettings.KEY_SOURCES_ENABLED_ALL) {
 		isAllSourcesEnabled
+	}
+
+	private val usageRefresh = MutableStateFlow(0)
+	private val pinnedRefresh = MutableStateFlow(0)
+
+	private val usageListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> usageRefresh.value++ }
+	private val pinnedListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> pinnedRefresh.value++ }
+
+	private val usagePrefs: SharedPreferences by lazy {
+		context.getSharedPreferences("source_usage", Context.MODE_PRIVATE).also {
+			it.registerOnSharedPreferenceChangeListener(usageListener)
+		}
+	}
+
+	private val sourceStatePrefs: SharedPreferences by lazy {
+		context.getSharedPreferences("source_state", Context.MODE_PRIVATE).also {
+			it.registerOnSharedPreferenceChangeListener(pinnedListener)
+		}
+	}
+
+	private fun sourceKeyOf(source: MangaSource): String = when (source) {
+		is MangaSourceInfo -> sourceKeyOf(source.mangaSource)
+		is MihonMangaSource -> "mihon:${source.pkgName}:${source.catalogueSource.name}"
+		else -> source.name
+	}
+
+	private fun getPinnedSourceKeys(): List<String> {
+		val raw = sourceStatePrefs.getString("pinned_sources_order", null).orEmpty()
+		if (raw.isEmpty()) return emptyList()
+		return raw.split(";").filter { it.isNotBlank() }
+	}
+
+	private fun setPinnedSourceKeys(keys: List<String>) {
+		sourceStatePrefs.edit().putString("pinned_sources_order", keys.joinToString(";")).apply()
+	}
+
+	fun setIsPinned(sources: Collection<MangaSource>, isPinned: Boolean): ReversibleHandle {
+		val before = getPinnedSourceKeys()
+		val updated = before.toMutableList()
+		for (source in sources) {
+			val key = sourceKeyOf(source)
+			if (isPinned) {
+				updated.remove(key)
+				updated.add(0, key)
+			} else {
+				updated.remove(key)
+			}
+		}
+		setPinnedSourceKeys(updated)
+		return ReversibleHandle {
+			setPinnedSourceKeys(before)
+		}
+	}
+
+	private fun buildMihonSourceInfoList(sources: List<MangaSource>): List<MangaSourceInfo> {
+		if (sources.isEmpty()) return emptyList()
+		val pinnedOrder = getPinnedSourceKeys()
+		val pinnedIndex = HashMap<String, Int>(pinnedOrder.size)
+		for ((index, key) in pinnedOrder.withIndex()) {
+			pinnedIndex[key] = index
+		}
+
+		val pinned = ArrayList<MangaSourceInfo>()
+		val unpinned = ArrayList<MangaSourceInfo>()
+		for (source in sources) {
+			val isPinned = sourceKeyOf(source) in pinnedIndex
+			val item = MangaSourceInfo(source, isEnabled = true, isPinned = isPinned)
+			if (isPinned) pinned += item else unpinned += item
+		}
+
+		pinned.sortBy { pinnedIndex[sourceKeyOf(it.mangaSource)] ?: Int.MAX_VALUE }
+		when (settings.sourcesSortOrder) {
+			SourcesSortOrder.ALPHABETIC -> unpinned.sortWith(compareBy { it.getTitle(context) })
+			SourcesSortOrder.LAST_USED -> unpinned.sortWith(compareByDescending { usagePrefs.getLong(sourceKeyOf(it.mangaSource), 0L) })
+			else -> Unit
+		}
+		return pinned + unpinned
+	}
+
+	private val appLanguage: String
+		get() = ConfigurationCompat.getLocales(context.resources.configuration)[0]
+			?.language
+			?.takeIf { it.isNotEmpty() }
+			?: "en"
+
+	suspend fun reloadMihonSources() {
+		mihonExtensionManager?.ensureReady(forceRefresh = true)
+	}
+
+	fun getAllMihonSources(): List<MihonMangaSource> {
+		val manager = mihonExtensionManager ?: return emptyList()
+		manager.initialize()
+		val contentFilter = settings.contentFilter
+		return manager.getMihonMangaSources().filter { it.contentWarning <= contentFilter }
+	}
+
+	fun observeAllMihonSources(): Flow<List<MihonMangaSource>> {
+		val manager = mihonExtensionManager ?: return kotlinx.coroutines.flow.flowOf(emptyList())
+		manager.initialize()
+		return combine(
+			manager.installedExtensions,
+			manager.isLoading,
+			settings.observeAsFlow(AppSettings.KEY_CONTENT_FILTER) { contentFilter },
+		) { _: Any?, _: Any?, _: Any? ->
+			getAllMihonSources()
+		}.distinctUntilChanged()
+	}
+
+	fun getMihonSources(): List<MihonMangaSource> {
+		val hiddenLangs = settings.hiddenSourceLanguages
+		return getActiveMihonSources().filterNot { it.language in hiddenLangs }
+	}
+
+	fun getActiveMihonSources(): List<MihonMangaSource> {
+		val manager = mihonExtensionManager ?: return emptyList()
+		manager.initialize()
+		val contentFilter = settings.contentFilter
+		val hiddenPackages = settings.mihonHiddenPackages
+		val appLang = appLanguage
+		return manager.getMihonMangaSources()
+			.filter { it.contentWarning <= contentFilter }
+			.filterNot { it.pkgName in hiddenPackages }
+			.groupBy { it.pkgName to it.catalogueSource.name }
+			.mapNotNull { (key, group) ->
+				if (group.size == 1) {
+					group.first()
+				} else {
+					val (pkgName, sourceName) = key
+					val langs = group.map { it.language }
+					val stored = settings.getMihonActiveLang(pkgName, sourceName)
+					val activeLang = org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage(langs, stored, appLang)
+					group.firstOrNull { it.language == activeLang } ?: group.first()
+				}
+			}
+	}
+
+	fun observeMihonSources(): Flow<List<MihonMangaSource>> {
+		val manager = mihonExtensionManager ?: return kotlinx.coroutines.flow.flowOf(emptyList())
+		manager.initialize()
+		return combine(
+			manager.installedExtensions,
+			manager.isLoading,
+			settings.observeAsFlow(AppSettings.KEY_MIHON_PER_EXT_ACTIVE_LANG) { mihonPerExtActiveLangs },
+			settings.observeAsFlow(AppSettings.KEY_CONTENT_FILTER) { contentFilter },
+			settings.observeAsFlow(AppSettings.KEY_MIHON_HIDDEN_PACKAGES) { mihonHiddenPackages },
+			settings.observeAsFlow(AppSettings.KEY_HIDDEN_SOURCE_LANGUAGES) { hiddenSourceLanguages },
+		) { _: Array<Any?> ->
+			getMihonSources()
+		}.distinctUntilChanged()
+	}
+
+
+
+	fun resolveActiveSource(source: MangaSource): ResolvedSource {
+		val mihon = (source.unwrap() as? MihonMangaSource) ?: return ResolvedSource(source, null)
+		val manager = mihonExtensionManager ?: return ResolvedSource(source, null)
+		manager.initialize()
+		val siblings = manager.getMihonMangaSources()
+			.filter { it.pkgName == mihon.pkgName && it.catalogueSource.name == mihon.catalogueSource.name }
+		if (siblings.size <= 1) return ResolvedSource(source, null)
+		val stored = settings.getMihonActiveLang(mihon.pkgName, mihon.catalogueSource.name)
+		val activeLang = org.koitharu.kotatsu.mihon.resolveActiveMihonLanguage(siblings.map { it.language }, stored, appLanguage)
+		val active = siblings.firstOrNull { it.language == activeLang } ?: mihon
+		return ResolvedSource(active, active.languageDisplayName)
 	}
 
 	private fun String.toMangaSourceOrNull(): ParserMangaSource? = ActiveParsers.findSource(this)

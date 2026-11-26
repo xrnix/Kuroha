@@ -1,9 +1,11 @@
 package org.koitharu.kotatsu.settings.sources
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayName
 import org.koitharu.kotatsu.core.util.ext.getQuantityStringSafe
 import org.koitharu.kotatsu.explore.data.SourcesSortOrder
+import org.koitharu.kotatsu.extensions.install.ShizukuExtensionInstaller
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.SettingsActivity
@@ -43,12 +46,33 @@ import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
 import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
 import org.koitharu.kotatsu.settings.compose.rememberStringPref
 import org.koitharu.kotatsu.settings.sources.manage.SourcesManageFragment
+import rikka.shizuku.Shizuku
 import java.util.Locale
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SourcesSettingsFragment : BaseComposeSettingsFragment(R.string.remote_sources) {
 
 	private val viewModel by viewModels<SourcesSettingsViewModel>()
+
+	@Inject
+	lateinit var settings: AppSettings
+
+	@Inject
+	lateinit var shizukuInstaller: ShizukuExtensionInstaller
+
+	private val shizukuPermissionListener = object : Shizuku.OnRequestPermissionResultListener {
+		override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
+			if (requestCode != SHIZUKU_PERMISSION_REQUEST_CODE) return
+			runCatching { Shizuku.removeRequestPermissionResultListener(this) }
+			if (grantResult == PackageManager.PERMISSION_GRANTED) {
+				settings.isShizukuInstallerEnabled = true
+			} else {
+				settings.isShizukuInstallerEnabled = false
+				Toast.makeText(requireContext(), R.string.shizuku_permission_denied, Toast.LENGTH_LONG).show()
+			}
+		}
+	}
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -73,6 +97,8 @@ class SourcesSettingsFragment : BaseComposeSettingsFragment(R.string.remote_sour
 						)
 					},
 					onOpenCatalog = { router.openSourcesCatalog() },
+					onOpenStores = { router.openExtensionStores() },
+					onShizukuChanged = ::setShizukuEnabled,
 					enabledCount = enabledCount,
 					availableCount = availableCount,
 					isLinksEnabled = isLinksEnabled,
@@ -87,12 +113,68 @@ class SourcesSettingsFragment : BaseComposeSettingsFragment(R.string.remote_sour
 			}
 		}
 	}
+
+	override fun onDestroy() {
+		runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
+		super.onDestroy()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		if (!settings.isShizukuInstallerEnabled) return
+		if (!shizukuInstaller.isInstalled) {
+			settings.isShizukuInstallerEnabled = false
+			return
+		}
+		val binderReady = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+		if (
+			binderReady &&
+			runCatching {
+				Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED
+			}.getOrDefault(true)
+		) {
+			settings.isShizukuInstallerEnabled = false
+		}
+	}
+
+	private fun setShizukuEnabled(enabled: Boolean) {
+		if (!enabled) {
+			settings.isShizukuInstallerEnabled = false
+			return
+		}
+		when {
+			!shizukuInstaller.isInstalled -> {
+				Toast.makeText(requireContext(), R.string.shizuku_not_installed, Toast.LENGTH_LONG).show()
+			}
+			!runCatching { Shizuku.pingBinder() }.getOrDefault(false) -> {
+				Toast.makeText(requireContext(), R.string.shizuku_not_running, Toast.LENGTH_LONG).show()
+			}
+			runCatching {
+				Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+			}.getOrDefault(false) -> {
+				settings.isShizukuInstallerEnabled = true
+			}
+			else -> runCatching {
+				Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+				Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+			}.onFailure {
+				Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+				Toast.makeText(requireContext(), R.string.shizuku_permission_denied, Toast.LENGTH_LONG).show()
+			}
+		}
+	}
+
+	private companion object {
+		const val SHIZUKU_PERMISSION_REQUEST_CODE = 14045
+	}
 }
 
 @Composable
 private fun SourcesScreen(
 	onOpenManage: () -> Unit,
 	onOpenCatalog: () -> Unit,
+	onOpenStores: () -> Unit,
+	onShizukuChanged: (Boolean) -> Unit,
 	enabledCount: Int,
 	availableCount: Int,
 	isLinksEnabled: Boolean,
@@ -114,6 +196,11 @@ private fun SourcesScreen(
 	var enableAllSources by rememberBooleanPref(AppSettings.KEY_SOURCES_ENABLED_ALL, false)
 	var mirrorSwitching by rememberBooleanPref(AppSettings.KEY_MIRROR_SWITCHING, false)
 	var autoUpdateParsers by rememberBooleanPref(AppSettings.KEY_PARSERS_AUTO_UPDATE, true)
+
+	var privateEnabled by rememberBooleanPref(AppSettings.KEY_PRIVATE_INSTALLER, false)
+	var shizukuEnabled by rememberBooleanPref(AppSettings.KEY_SHIZUKU_INSTALLER, false)
+	var autoUpdateExtensions by rememberBooleanPref(AppSettings.KEY_AUTO_UPDATE_EXTENSIONS, false)
+	var updateNotifications by rememberBooleanPref(AppSettings.KEY_EXTENSION_UPDATE_NOTIFICATIONS, true)
 
 	var showTypesDialog by remember { mutableStateOf(false) }
 	var showLocalesDialog by remember { mutableStateOf(false) }
@@ -197,6 +284,15 @@ private fun SourcesScreen(
 					)
 				}
 				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.extension_stores),
+						subtitle = stringResource(R.string.manage_stores_summary),
+						icon = R.drawable.ic_storefront,
+						shape = pos.shape,
+						onClick = onOpenStores,
+					)
+				}
+				item { pos ->
 					ListSettingsItem(
 						title = stringResource(R.string.sort_order),
 						entries = sortEntries,
@@ -214,6 +310,57 @@ private fun SourcesScreen(
 						onCheckedChange = { sourcesGrid = it },
 						icon = R.drawable.ic_grid,
 						shape = pos.shape,
+					)
+				}
+			}
+		}
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.extensions)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.private_extensions),
+						subtitle = stringResource(R.string.private_extensions_summary),
+						checked = privateEnabled,
+						onCheckedChange = {
+							privateEnabled = it
+							if (it) shizukuEnabled = false
+						},
+						icon = R.drawable.ic_shield,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.shizuku_title),
+						subtitle = stringResource(R.string.shizuku_summary),
+						checked = shizukuEnabled,
+						onCheckedChange = onShizukuChanged,
+						icon = R.drawable.ic_auth_key_large,
+						shape = pos.shape,
+						enabled = !privateEnabled,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.ext_auto_update_title),
+						subtitle = stringResource(R.string.ext_auto_update_summary),
+						checked = if (privateEnabled) true else autoUpdateExtensions,
+						onCheckedChange = { autoUpdateExtensions = it },
+						icon = R.drawable.ic_updated,
+						shape = pos.shape,
+						enabled = !privateEnabled && shizukuEnabled,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.ext_update_notifications_title),
+						subtitle = stringResource(R.string.ext_update_notifications_summary),
+						checked = updateNotifications,
+						onCheckedChange = { updateNotifications = it },
+						icon = R.drawable.ic_updated,
+						shape = pos.shape,
+						enabled = !privateEnabled,
 					)
 				}
 			}

@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.sourcescore.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 /**
@@ -31,18 +32,17 @@ data class SourceStatsEntity(
 	@ColumnInfo(name = "uploaded_fail") val uploadedFail: Int = 0,
 	@ColumnInfo(name = "uploaded_empty") val uploadedEmpty: Int = 0,
 	@ColumnInfo(name = "uploaded_cf") val uploadedCf: Int = 0,
-) {
+)
 
-	val total: Int get() = okCount + failCount
+val SourceStatsEntity.total: Int get() = okCount + failCount
 
-	/** Unsent counters. Uploads are deltas, so a failed upload simply retries next time. */
-	fun pendingOk() = (okCount - uploadedOk).coerceAtLeast(0)
+/** Unsent counters. Uploads are deltas, so a failed upload simply retries next time. */
+fun SourceStatsEntity.pendingOk() = (okCount - uploadedOk).coerceAtLeast(0)
 
-	fun pendingFail() = (failCount - uploadedFail).coerceAtLeast(0)
+fun SourceStatsEntity.pendingFail() = (failCount - uploadedFail).coerceAtLeast(0)
 
-	fun pendingEmpty() = (emptyCount - uploadedEmpty).coerceAtLeast(0)
+fun SourceStatsEntity.pendingEmpty() = (emptyCount - uploadedEmpty).coerceAtLeast(0)
 
-	fun pendingCf() = (cfCount - uploadedCf).coerceAtLeast(0)
+fun SourceStatsEntity.pendingCf() = (cfCount - uploadedCf).coerceAtLeast(0)
 
-	fun hasPending() = pendingOk() > 0 || pendingFail() > 0 || pendingEmpty() > 0 || pendingCf() > 0
-}
+fun SourceStatsEntity.hasPending() = pendingOk() > 0 || pendingFail() > 0 || pendingEmpty() > 0 || pendingCf() > 0

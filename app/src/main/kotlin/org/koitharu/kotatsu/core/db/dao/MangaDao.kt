@@ -92,6 +92,18 @@ abstract class MangaDao {
 	abstract suspend fun cleanup(idsToKeep: Set<Long>)
 
 	@Transaction
+	@Query(
+		"""
+		SELECT DISTINCT source FROM manga
+		WHERE source LIKE 'MIHON\_%' ESCAPE '\'
+			AND manga_id IN (
+				SELECT manga_id FROM favourites WHERE deleted_at = 0
+				UNION SELECT manga_id FROM history WHERE deleted_at = 0
+			)
+		""",
+	)
+	abstract suspend fun findExternalSourcesInLibrary(): List<String>
+
 	open suspend fun upsert(manga: MangaEntity, tags: Iterable<TagEntity>? = null) {
 		val stored = manga.keepingItsSource()
 		upsert(stored)

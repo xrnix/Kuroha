@@ -37,6 +37,8 @@ import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinato
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.image.AvifImageDecoder
 import org.koitharu.kotatsu.core.image.CbzFetcher
+import org.koitharu.kotatsu.core.image.MihonImageFetcher
+import org.koitharu.kotatsu.mihon.MihonExtensionManager
 import org.koitharu.kotatsu.core.image.JxlImageDecoder
 import org.koitharu.kotatsu.core.image.MangaSourceHeaderInterceptor
 import org.koitharu.kotatsu.core.network.MangaHttpClient
@@ -112,6 +114,7 @@ interface AppModule {
 			coverRestoreInterceptor: CoverRestoreInterceptor,
 			networkStateProvider: Provider<NetworkState>,
 			captchaHandler: CaptchaHandler,
+			mihonExtensionManagerProvider: Provider<MihonExtensionManager>,
 		): ImageLoader {
 			val diskCacheFactory = {
 				val rootDir = context.externalCacheDir ?: context.cacheDir
@@ -147,6 +150,11 @@ interface AppModule {
 					add(faviconFetcherFactory)
 					add(MangaPageKeyer())
 					add(pageFetcherFactory)
+					add(
+						MihonImageFetcher.Factory(
+							extensionManager = mihonExtensionManagerProvider,
+						),
+					)
 					add(imageProxyInterceptor)
 					add(coverRestoreInterceptor)
 					add(MangaSourceHeaderInterceptor())

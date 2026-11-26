@@ -454,7 +454,7 @@ class DownloadWorker @AssistedInject constructor(
 		setProgress(state.toWorkData())
 	}
 
-	private suspend fun getDoneChapters(manga: Manga) = runCatchingCancellable {
+	private suspend fun getDoneChapters(manga: Manga): Set<Long> = runCatchingCancellable {
 		localMangaRepository.getDetails(manga).chapters?.ids()
 	}.getOrNull().orEmpty()
 

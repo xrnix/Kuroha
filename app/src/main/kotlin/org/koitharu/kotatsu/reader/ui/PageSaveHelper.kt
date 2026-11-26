@@ -146,7 +146,7 @@ class PageSaveHelper @AssistedInject constructor(
 		}
 	}
 
-	private suspend fun getPageLoader() = withContext(Dispatchers.Main.immediate) {
+	private suspend fun getPageLoader(): PageLoader = withContext(Dispatchers.Main.immediate) {
 		pageLoaderProvider.get()
 	}
 
@@ -171,7 +171,7 @@ class PageSaveHelper @AssistedInject constructor(
 		else -> throw IllegalArgumentException("Bad uri $uri: unsupported scheme")
 	}
 
-	private suspend fun copyImpl(source: Uri, destination: Uri) = withContext(Dispatchers.IO) {
+	private suspend fun copyImpl(source: Uri, destination: Uri): Long = withContext(Dispatchers.IO) {
 		runInterruptible {
 			context.contentResolver.openOutputStream(destination) ?: throw IOException("Output stream is null")
 		}.sink().buffer().use { sink ->
@@ -192,7 +192,7 @@ class PageSaveHelper @AssistedInject constructor(
 		val page: MangaPage,
 	) {
 
-		fun getFileBaseName() = buildString {
+		fun getFileBaseName(): String = buildString {
 			append(manga.title.toFileNameSafe().take(MAX_BASENAME_LENGTH))
 			manga.findChapterById(chapterId)?.let { chapter ->
 				append('-')

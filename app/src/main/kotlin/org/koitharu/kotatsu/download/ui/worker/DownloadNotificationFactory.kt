@@ -37,6 +37,7 @@ import org.koitharu.kotatsu.download.ui.list.DownloadsActivity
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.util.format
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import java.util.HashMap
 import java.util.UUID
 import androidx.appcompat.R as appcompatR
 

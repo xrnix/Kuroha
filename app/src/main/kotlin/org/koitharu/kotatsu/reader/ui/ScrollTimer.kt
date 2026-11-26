@@ -43,9 +43,9 @@ class ScrollTimer @AssistedInject constructor(
 	var pageSwitchDelay: Long = 100L
 		private set
 	private var resumeAt = 0L
-	private var isTouchDown = MutableStateFlow(false)
-	private val isRunning = MutableStateFlow(false)
-	private val scrollDelta = resources.resolveDp(1)
+	private var isTouchDown: MutableStateFlow<Boolean> = MutableStateFlow(false)
+	private val isRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
+	private val scrollDelta: Int = resources.resolveDp(1)
 
 	val isActive: StateFlow<Boolean>
 		get() = isRunning

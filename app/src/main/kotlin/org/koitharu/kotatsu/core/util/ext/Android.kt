@@ -284,3 +284,24 @@ fun Context.toast(text: CharSequence, duration: Int = android.widget.Toast.LENGT
 fun Context.toast(@androidx.annotation.StringRes text: Int, duration: Int = android.widget.Toast.LENGTH_SHORT) {
 	android.widget.Toast.makeText(this, text, duration).show()
 }
+
+fun View.roundTopCorners(radius: Float, extraInset: Int = 0) {
+	if (radius <= 0f) {
+		outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+		clipToOutline = false
+		return
+	}
+	outlineProvider = object : android.view.ViewOutlineProvider() {
+		override fun getOutline(view: View, outline: android.graphics.Outline) {
+			outline.setRoundRect(
+				view.paddingLeft + extraInset,
+				0,
+				view.width - view.paddingRight - extraInset,
+				view.height + radius.toInt(),
+				radius,
+			)
+		}
+	}
+	clipToOutline = true
+	invalidateOutline()
+}

@@ -98,12 +98,15 @@ class SourceSettings(context: Context, source: MangaSource) : MangaSourceConfig 
 
 	companion object {
 
+		const val KEY_INTERCEPT_CLOUDFLARE = "intercept_cloudflare"
 		const val KEY_DOMAIN = "domain"
 		const val KEY_NO_CAPTCHA = "no_captcha"
 		const val KEY_NO_AUTO_CAPTCHA = "no_auto_captcha"
 		const val KEY_SLOWDOWN = "slowdown"
 		const val KEY_SORT_ORDER = "sort_order"
 		const val KEY_CF_USER_AGENT = "cf_user_agent"
+
+		fun getStorageName(sourceName: String): String = sourceName.replace(File.separatorChar, '$')
 
 		fun isSourcePrefsFile(name: String): Boolean = name == "source_state" ||
 			name == "source_usage" ||

@@ -9,17 +9,25 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.text.inSpans
+import eu.kanade.tachiyomi.source.online.HttpSource
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.parser.external.ExternalMangaSource
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayName
+import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.toLocale
 import org.koitharu.kotatsu.core.util.ext.toLocaleOrNull
 import org.koitharu.kotatsu.core.parser.bundle.ActiveParsers
+import org.koitharu.kotatsu.extensions.runtime.getExternalExtensionLanguageDisplayName
+import org.koitharu.kotatsu.mihon.MihonExtensionLoader
+import org.koitharu.kotatsu.mihon.MihonExtensionManager
+import org.koitharu.kotatsu.mihon.model.MihonMangaSource
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
-import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.splitTwoParts
 import java.util.Locale
+
+typealias MangaSource = org.koitharu.kotatsu.parsers.model.MangaSource
 
 data object LocalMangaSource : MangaSource {
 	override val name = "LOCAL"
@@ -33,6 +41,18 @@ data object TestMangaSource : MangaSource {
 	override val name = "TEST"
 }
 
+class MissingMangaSource(
+	override val name: String,
+	val cachedTitle: String? = null,
+) : MangaSource {
+
+	override fun equals(other: Any?): Boolean = other is MissingMangaSource && other.name == name
+
+	override fun hashCode(): Int = name.hashCode()
+
+	override fun toString(): String = "MissingMangaSource(name=$name, cachedTitle=$cachedTitle)"
+}
+
 fun MangaSource(name: String?): MangaSource {
 	when (name ?: return UnknownMangaSource) {
 		UnknownMangaSource.name -> return UnknownMangaSource
@@ -43,10 +63,26 @@ fun MangaSource(name: String?): MangaSource {
 		val parts = name.substringAfter(':').splitTwoParts('/') ?: return UnknownMangaSource
 		return ExternalMangaSource(packageName = parts.first, authority = parts.second)
 	}
+	if (name.startsWith("MIHON_")) {
+		val sourceId = name.removePrefix("MIHON_").substringBefore(':').toLongOrNull()
+		if (sourceId != null) {
+			return MihonExtensionManager.getById(sourceId) ?: MissingMangaSource(name)
+		}
+		return MihonExtensionManager.getByName(name) ?: MissingMangaSource(name)
+	}
 	ActiveParsers.sources.forEach {
 		if (it.name == name) return it
 	}
-	return UnknownMangaSource
+	return MissingMangaSource(name)
+}
+
+fun MangaSource(name: String?, sourceTitle: String?): MangaSource {
+	val source = MangaSource(name)
+	return if (source is MissingMangaSource && !sourceTitle.isNullOrBlank()) {
+		MissingMangaSource(source.name, sourceTitle)
+	} else {
+		source
+	}
 }
 
 fun Collection<String>.toMangaSources() = map(::MangaSource)
@@ -54,8 +90,37 @@ fun Collection<String>.toMangaSources() = map(::MangaSource)
 fun MangaSource.isNsfw(): Boolean = when (this) {
 	is MangaSourceInfo -> mangaSource.isNsfw()
 	is ParserMangaSource -> contentType == ContentType.HENTAI
+	is MihonMangaSource -> contentWarning == ContentWarning.NSFW
 	else -> false
 }
+
+fun MangaSource.isSafe(): Boolean = when (val source = unwrap()) {
+	is ParserMangaSource -> source.contentType != ContentType.HENTAI
+	is MihonMangaSource -> source.contentWarning == ContentWarning.SAFE
+	else -> true
+}
+
+fun List<MangaSource>.forSuggestions(excludeNsfw: Boolean): List<MangaSource> =
+	if (excludeNsfw) filter { it.isSafe() }.ifEmpty { this } else this
+
+val MangaSource.homeUrl: String?
+	get() = when (val source = unwrap()) {
+		is MihonMangaSource -> (source.catalogueSource as? HttpSource)?.baseUrl
+		else -> null
+	}?.takeIf { it.isHttpUrl() }
+
+val MangaSource.isBroken: Boolean
+	get() = when (unwrap()) {
+		is MissingMangaSource -> true
+		UnknownMangaSource -> true
+		else -> false
+	}
+
+val MangaSource.isLocal: Boolean
+	get() = unwrap() == LocalMangaSource
+
+val MangaSource.isNovelSource: Boolean
+	get() = false
 
 @get:StringRes
 val ContentType.titleResId
@@ -89,7 +154,28 @@ fun MangaSource.getSummary(context: Context): String? = when (val source = unwra
 		context.getString(R.string.source_summary_pattern, type, locale)
 	}
 
+	is MihonMangaSource -> buildString {
+		append(getExternalExtensionLanguageDisplayName(source.language))
+		runCatching { context.packageManager.getPackageInfo(source.pkgName, 0).versionName }
+			.getOrNull()
+			?.let { append(" • ").append(it) }
+		val settings = AppSettings(context.applicationContext)
+		val repoLabel = settings.getExtensionStoreLabel(
+			source.pkgName,
+			MihonExtensionLoader.getPackageSignatures(context, source.pkgName),
+		)
+		repoLabel?.let { append(" • ").append(it) }
+	}
+
 	is ExternalMangaSource -> context.getString(R.string.external_source)
+
+	is MissingMangaSource -> {
+		if (source.name.startsWith("MIHON_")) {
+			context.getString(R.string.external_source)
+		} else {
+			null
+		}
+	}
 
 	else -> null
 }
@@ -98,8 +184,50 @@ fun MangaSource.getTitle(context: Context): String = when (val source = unwrap()
 	is ParserMangaSource -> source.title
 	LocalMangaSource -> context.getString(R.string.local_storage)
 	TestMangaSource -> context.getString(R.string.test_parser)
+	is MihonMangaSource -> source.displayName
+	is MissingMangaSource -> source.resolveDisplayName(context)
 	is ExternalMangaSource -> source.resolveName(context)
 	else -> context.getString(R.string.unknown)
+}
+
+fun MangaSource.isExternalSource(): Boolean = when (val source = unwrap()) {
+	is MihonMangaSource -> true
+	is ExternalMangaSource -> true
+	is MissingMangaSource -> source.name.startsWith("MIHON_")
+	else -> false
+}
+
+fun MangaSource.getStoredTitleOrNull(): String? = when (val source = unwrap()) {
+	is ParserMangaSource -> source.title
+	is MihonMangaSource -> source.displayName
+	is MissingMangaSource -> source.cachedDisplayNameOrNull() ?: source.liveDisplayNameOrNull()
+	LocalMangaSource -> null
+	else -> null
+}
+
+private fun MissingMangaSource.liveDisplayNameOrNull(): String? {
+	if (!name.startsWith("MIHON_")) return null
+	val id = name.removePrefix("MIHON_").substringBefore(':').toLongOrNull() ?: return null
+	return MihonExtensionManager.getById(id)?.displayName
+}
+
+private fun MissingMangaSource.resolveDisplayName(context: Context): String {
+	if (name.startsWith("MIHON_")) {
+		val cachedName = cachedDisplayNameOrNull()
+		return if (cachedName != null) {
+			context.getString(R.string.missing_extension_source_pattern, cachedName)
+		} else {
+			context.getString(R.string.missing_extension_source_pattern, context.getString(R.string.unknown))
+		}
+	}
+	return name
+}
+
+private fun MissingMangaSource.cachedDisplayNameOrNull(): String? {
+	cachedTitle?.ifBlank { null }?.let { return it }
+	if (!name.startsWith("MIHON_")) return null
+	val parts = name.removePrefix("MIHON_").split(':', limit = 2)
+	return parts.getOrNull(1)?.ifBlank { null }
 }
 
 fun SpannableStringBuilder.appendIcon(textView: TextView, @DrawableRes resId: Int): SpannableStringBuilder {

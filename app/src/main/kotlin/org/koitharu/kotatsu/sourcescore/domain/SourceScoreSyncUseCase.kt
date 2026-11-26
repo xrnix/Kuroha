@@ -9,6 +9,11 @@ import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
 import org.koitharu.kotatsu.sourcescore.data.ProbeDto
 import org.koitharu.kotatsu.sourcescore.data.SourceScoreEntity
 import org.koitharu.kotatsu.sourcescore.data.nicknameRejection
+import org.koitharu.kotatsu.sourcescore.data.hasPending
+import org.koitharu.kotatsu.sourcescore.data.pendingOk
+import org.koitharu.kotatsu.sourcescore.data.pendingFail
+import org.koitharu.kotatsu.sourcescore.data.pendingEmpty
+import org.koitharu.kotatsu.sourcescore.data.pendingCf
 import java.time.LocalDate
 import java.time.ZoneOffset
 import javax.inject.Inject

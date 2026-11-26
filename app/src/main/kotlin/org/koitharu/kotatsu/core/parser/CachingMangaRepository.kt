@@ -21,7 +21,9 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 
 abstract class CachingMangaRepository(
 	private val cache: MemoryContentCache,
-) : MangaRepository {
+) : MangaRepository, FreshMangaDetailsRepository {
+
+	override suspend fun getFreshDetails(manga: Manga): Manga = getDetails(manga, CachePolicy.WRITE_ONLY)
 
 	private val detailsMutex = MultiMutex<Long>()
 	private val relatedMangaMutex = MultiMutex<Long>()
@@ -73,6 +75,8 @@ abstract class CachingMangaRepository(
 	protected abstract suspend fun getRelatedMangaImpl(seed: Manga): List<Manga>
 
 	protected abstract suspend fun getPagesImpl(chapter: MangaChapter): List<MangaPage>
+
+	protected open suspend fun getPagesImpl(manga: Manga, chapter: MangaChapter): List<MangaPage> = getPagesImpl(chapter)
 
 	private suspend fun <T> asyncSafe(block: suspend CoroutineScope.() -> T): SafeDeferred<T> {
 		var dispatcher = currentCoroutineContext()[CoroutineDispatcher.Key]

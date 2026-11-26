@@ -2,6 +2,8 @@ package org.koitharu.kotatsu.settings.sources.catalog
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.ContentWarning
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 
@@ -10,12 +12,44 @@ sealed interface SourceCatalogItem : ListModel {
 	data class Source(
 		val source: ParserMangaSource,
 		val isInPreset: Boolean = false,
-		/** Really popular: flame-marked and listed first - see SourceRank.hotSources. */
 		val isHot: Boolean = false,
 	) : SourceCatalogItem {
 
 		override fun areItemsTheSame(other: ListModel): Boolean {
 			return other is Source && other.source == source
+		}
+	}
+
+	data class Extension(
+		val packageName: String,
+		val title: String,
+		val subtitle: String,
+		val contentWarning: ContentWarning? = null,
+		val action: Action,
+		val isInProgress: Boolean = false,
+		val iconUrl: String? = null,
+		val sourceIconName: String? = null,
+		val sourceName: String? = null,
+		val storeId: String? = null,
+		val isHidden: Boolean = false,
+		val isPrivateMode: Boolean = false,
+	) : SourceCatalogItem {
+
+		enum class Action(
+			@DrawableRes val iconRes: Int,
+			@StringRes val titleRes: Int,
+		) {
+			INSTALL(R.drawable.ic_download, R.string.install),
+			UPDATE(R.drawable.ic_download, R.string.update),
+			UNINSTALL(R.drawable.ic_delete, R.string.uninstall),
+			ENABLE(R.drawable.ic_add, R.string.enable),
+			DISABLE(R.drawable.ic_close, R.string.disable),
+		}
+
+		override fun areItemsTheSame(other: ListModel): Boolean {
+			return other is Extension &&
+				other.packageName == packageName &&
+				other.action == action
 		}
 	}
 

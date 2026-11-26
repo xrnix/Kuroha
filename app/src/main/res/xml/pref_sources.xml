@@ -58,4 +58,31 @@
 		android:summary="@string/handle_links_summary"
 		android:title="@string/handle_links" />
 
+	<Preference
+		android:icon="@drawable/ic_storefront"
+		android:key="extension_stores"
+		android:persistent="false"
+		android:title="@string/extension_stores" />
+
+	<SwitchPreferenceCompat
+		android:defaultValue="false"
+		android:icon="@drawable/ic_shield"
+		android:key="private_installer"
+		android:summary="@string/private_extensions_summary"
+		android:title="@string/private_extensions" />
+
+	<SwitchPreferenceCompat
+		android:defaultValue="false"
+		android:icon="@drawable/ic_auth_key_large"
+		android:key="shizuku_installer"
+		android:summary="@string/shizuku_summary"
+		android:title="@string/shizuku_title" />
+
+	<SwitchPreferenceCompat
+		android:defaultValue="false"
+		android:icon="@drawable/ic_updated"
+		android:key="auto_update_extensions"
+		android:summary="@string/ext_auto_update_summary"
+		android:title="@string/ext_auto_update_title" />
+
 </PreferenceScreen>

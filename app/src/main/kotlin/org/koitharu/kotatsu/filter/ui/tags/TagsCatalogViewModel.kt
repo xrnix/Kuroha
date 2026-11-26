@@ -29,14 +29,14 @@ import org.koitharu.kotatsu.parsers.model.MangaTag
 @HiltViewModel(assistedFactory = TagsCatalogViewModel.Factory::class)
 class TagsCatalogViewModel @AssistedInject constructor(
 	@Assisted private val filter: FilterCoordinator,
-	@Assisted private val isExcluded: Boolean,
+	@Assisted private val isExcludeTag: Boolean,
 	private val mangaDataRepository: MangaDataRepository,
 ) : BaseViewModel() {
 
 	val searchQuery = MutableStateFlow("")
 
 	private val filterProperty: StateFlow<FilterProperty<MangaTag>>
-		get() = if (isExcluded) filter.tagsExcluded else filter.tags
+		get() = if (isExcludeTag) filter.tagsExcluded else filter.tags
 
 	@Suppress("RemoveExplicitTypeArguments")
 	private val tags: StateFlow<List<ListModel>> = combine(
@@ -47,14 +47,14 @@ class TagsCatalogViewModel @AssistedInject constructor(
 		buildList(available, cached, selected)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
 
-	val content = combine(tags, searchQuery) { raw, query ->
+	val content: StateFlow<List<ListModel>> = combine(tags, searchQuery) { raw, query ->
 		raw.filter { x ->
 			x !is TagCatalogItem || x.tag.title.contains(query, ignoreCase = true)
 		}
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Lazily, listOf(LoadingState()))
 
 	fun handleTagClick(tag: MangaTag, isChecked: Boolean) {
-		if (isExcluded) {
+		if (isExcludeTag) {
 			filter.toggleTagExclude(tag, !isChecked)
 		} else {
 			filter.toggleTag(tag, !isChecked)

@@ -9,6 +9,7 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Checkable
+import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.ActionMenuView
 import androidx.appcompat.widget.Toolbar
@@ -16,6 +17,7 @@ import androidx.appcompat.widget.TooltipCompat
 import androidx.core.view.children
 import androidx.core.view.descendants
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,6 +30,7 @@ import com.google.android.material.progressindicator.BaseProgressIndicator
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.slider.Slider
 import com.google.android.material.tabs.TabLayout
+import kotlin.math.roundToInt
 import kotlin.math.roundToInt
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
@@ -259,4 +262,24 @@ fun View.isOnScreen(): Boolean {
 	val actualPosition = Rect()
 	getGlobalVisibleRect(actualPosition)
 	return actualPosition.intersect(getWindowBounds())
+}
+
+fun TextView.bindExpandedSearchTitle(
+	ctl: com.google.android.material.appbar.CollapsingToolbarLayout,
+	title: CharSequence?,
+	expanded: Boolean,
+) {
+	if (expanded) {
+		typeface = ctl.expandedTitleTypeface
+		setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, ctl.expandedTitleTextSize)
+		setTextColor(context.getThemeColor(com.google.android.material.R.attr.colorOnSurface))
+		text = title
+		updateLayoutParams<ViewGroup.MarginLayoutParams> {
+			marginStart = ctl.expandedTitleMarginStart
+			marginEnd = ctl.expandedTitleMarginEnd
+			bottomMargin = (ctl.expandedTitleMarginBottom - paint.fontMetrics.descent)
+				.roundToInt().coerceAtLeast(0)
+		}
+	}
+	isVisible = expanded
 }

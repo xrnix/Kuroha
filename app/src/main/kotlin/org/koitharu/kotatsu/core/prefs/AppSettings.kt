@@ -47,11 +47,18 @@ import java.util.HashMap
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.koitharu.kotatsu.core.model.ContentWarning
+import org.koitharu.kotatsu.mihon.model.ExternalRepoInfo
+import org.koitharu.kotatsu.settings.sources.catalog.ExtensionInstallMode
+import org.koitharu.kotatsu.settings.sources.catalog.ExtensionStoreRegistryState
 
 @Singleton
 class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+	private val json = Json { ignoreUnknownKeys = true }
 	private val connectivityManager = context.connectivityManager
 	private val mangaListBadgesDefault = ArraySet(context.resources.getStringArray(R.array.values_list_badges))
 
@@ -188,8 +195,18 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 
 	var isNsfwContentDisabled: Boolean
-		get() = prefs.getBoolean(KEY_DISABLE_NSFW, false)
-		set(value) = prefs.edit { putBoolean(KEY_DISABLE_NSFW, value) }
+		get() = contentFilter < ContentWarning.NSFW
+		set(value) {
+			contentFilter = if (value) ContentWarning.SAFE else ContentWarning.NSFW
+		}
+
+	var contentFilter: ContentWarning
+		get() = prefs.getString(KEY_CONTENT_FILTER, null)?.let { x -> ContentWarning.entries.find { it.name == x } }
+			?: if (prefs.getBoolean(KEY_DISABLE_NSFW, false)) ContentWarning.SAFE else ContentWarning.NSFW
+		set(value) = prefs.edit {
+			putString(KEY_CONTENT_FILTER, value.name)
+			putBoolean(KEY_DISABLE_NSFW, value < ContentWarning.NSFW)
+		}
 
 	var appLocales: LocaleListCompat
 		get() {
@@ -939,7 +956,150 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		}
 	}
 
+	var defaultBrowseSortOrder: SortOrder
+		get() = prefs.getEnumValue(KEY_DEFAULT_BROWSE_SORT, SortOrder.POPULARITY)
+			.takeIf { it == SortOrder.POPULARITY || it == SortOrder.UPDATED } ?: SortOrder.POPULARITY
+		set(value) = prefs.edit { putEnumValue(KEY_DEFAULT_BROWSE_SORT, value) }
+
+	var isShizukuInstallerEnabled: Boolean
+		get() = prefs.getBoolean(KEY_SHIZUKU_INSTALLER, false)
+		set(value) = prefs.edit {
+			putBoolean(KEY_SHIZUKU_INSTALLER, value)
+			if (!value) putBoolean(KEY_AUTO_UPDATE_EXTENSIONS, false)
+			if (value) putBoolean(KEY_PRIVATE_INSTALLER, false)
+		}
+
+	var isPrivateInstallEnabled: Boolean
+		get() = prefs.getBoolean(KEY_PRIVATE_INSTALLER, false)
+		set(value) = prefs.edit {
+			putBoolean(KEY_PRIVATE_INSTALLER, value)
+			if (value) putBoolean(KEY_SHIZUKU_INSTALLER, false)
+		}
+
+	var isAutoUpdateExtensionsEnabled: Boolean
+		get() = prefs.getBoolean(KEY_AUTO_UPDATE_EXTENSIONS, false)
+		set(value) = prefs.edit { putBoolean(KEY_AUTO_UPDATE_EXTENSIONS, value) }
+
+	var hasExtensionUpdates: Boolean
+		get() = prefs.getBoolean(KEY_EXTENSION_UPDATES_AVAILABLE, false)
+		set(value) = prefs.edit { putBoolean(KEY_EXTENSION_UPDATES_AVAILABLE, value) }
+
+	var isExtensionUpdateNotificationsEnabled: Boolean
+		get() = prefs.getBoolean(KEY_EXTENSION_UPDATE_NOTIFICATIONS, true)
+		set(value) = prefs.edit { putBoolean(KEY_EXTENSION_UPDATE_NOTIFICATIONS, value) }
+
+	var lastExtensionUpdateNotificationTime: Long
+		get() = prefs.getLong(KEY_LAST_EXTENSION_UPDATE_NOTIFICATION_TIME, 0L)
+		set(value) = prefs.edit { putLong(KEY_LAST_EXTENSION_UPDATE_NOTIFICATION_TIME, value) }
+
+	var mihonPerExtActiveLangs: Set<String>
+		get() = prefs.getStringSet(KEY_MIHON_PER_EXT_ACTIVE_LANG, emptySet()).orEmpty()
+		set(value) = prefs.edit { putStringSet(KEY_MIHON_PER_EXT_ACTIVE_LANG, value) }
+
+	fun getMihonActiveLang(pkgName: String, sourceName: String): String? {
+		val suffix = "\n" + mihonSourceKey(pkgName, sourceName)
+		return mihonPerExtActiveLangs.firstOrNull { it.endsWith(suffix) }
+			?.substringBefore("\n")
+	}
+
+	fun setMihonActiveLang(pkgName: String, sourceName: String, lang: String) {
+		val suffix = "\n" + mihonSourceKey(pkgName, sourceName)
+		mihonPerExtActiveLangs = mihonPerExtActiveLangs.filterNot { it.endsWith(suffix) }.toSet() + (lang + suffix)
+	}
+
+	private fun mihonSourceKey(pkgName: String, sourceName: String): String = "$pkgName\n$sourceName"
+
+	var mihonHiddenPackages: Set<String>
+		get() = prefs.getStringSet(KEY_MIHON_HIDDEN_PACKAGES, emptySet()).orEmpty()
+		set(value) = prefs.edit { putStringSet(KEY_MIHON_HIDDEN_PACKAGES, value) }
+
+	fun isMihonPackageHidden(pkgName: String): Boolean = pkgName in mihonHiddenPackages
+
+	fun setMihonPackageHidden(pkgName: String, hidden: Boolean) {
+		val updated = mihonHiddenPackages.toMutableSet()
+		if (hidden) updated.add(pkgName) else updated.remove(pkgName)
+		mihonHiddenPackages = updated
+	}
+
+	var externalExtensionsRepoUrl: String?
+		get() = prefs.getString(KEY_EXTERNAL_EXTENSIONS_REPO_URL, null)?.takeIf { it.isNotBlank() }
+		set(value) = prefs.edit {
+			if (value.isNullOrBlank()) {
+				remove(KEY_EXTERNAL_EXTENSIONS_REPO_URL)
+			} else {
+				putString(KEY_EXTERNAL_EXTENSIONS_REPO_URL, value.trim())
+			}
+		}
+
+	private val extensionRepoMap: Map<String, String>
+		get() = prefs.getStringSet(KEY_MIHON_EXTENSION_REPOS, emptySet()).orEmpty()
+			.mapNotNull { entry ->
+				val sep = entry.indexOf('\t')
+				if (sep <= 0) null else entry.substring(0, sep) to entry.substring(sep + 1)
+			}.toMap()
+
+	fun getExtensionRepoUrls(): Map<String, String> = extensionRepoMap
+
+	val externalRepoInfos: List<ExternalRepoInfo>
+		get() = prefs.getString(KEY_MIHON_REPO_INFOS, null)
+			?.let { runCatching { json.decodeFromString<List<ExternalRepoInfo>>(it) }.getOrNull() }
+			?: emptyList()
+
+	var extensionStoreRegistryState: ExtensionStoreRegistryState
+		get() = prefs.getString(KEY_EXTENSION_STORE_REGISTRY, null)
+			?.let { runCatching { json.decodeFromString<ExtensionStoreRegistryState>(it) }.getOrNull() }
+			?: ExtensionStoreRegistryState()
+		set(value) = prefs.edit {
+			putString(KEY_EXTENSION_STORE_REGISTRY, json.encodeToString(value))
+		}
+
+	var isExtensionStoreMigrationComplete: Boolean
+		get() = prefs.getBoolean(KEY_EXTENSION_STORE_MIGRATED, false)
+		set(value) = prefs.edit { putBoolean(KEY_EXTENSION_STORE_MIGRATED, value) }
+
+	fun getExtensionStoreLabel(packageName: String, signatures: Collection<String>): String? {
+		val state = extensionStoreRegistryState
+		val mode = if (isPrivateInstallEnabled) ExtensionInstallMode.SANDBOX else ExtensionInstallMode.SYSTEM
+		state.ownerships.firstOrNull { it.mode == mode && it.packageName == packageName }
+			?.storeId
+			?.let { id -> state.stores.firstOrNull { it.id == id } }
+			?.let { return it.displayName }
+		return state.stores.filter { store ->
+			store.fingerprint?.let { fingerprint ->
+				signatures.any { it.equals(fingerprint, ignoreCase = true) }
+			} == true
+		}.singleOrNull()?.displayName
+	}
+
+	var hiddenSourceLanguages: Set<String>
+		get() = prefs.getStringSet(KEY_HIDDEN_SOURCE_LANGUAGES, emptySet()).orEmpty()
+		set(value) = prefs.edit { putStringSet(KEY_HIDDEN_SOURCE_LANGUAGES, value) }
+
+	val mihonUserAgentOverride: String?
+		get() = prefs.getString(KEY_MIHON_USER_AGENT, null)
+
 	companion object {
+
+		const val DEFAULT_MIHON_USER_AGENT =
+			"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
+
+		const val KEY_CONTENT_FILTER = "content_filter"
+		const val KEY_DEFAULT_BROWSE_SORT = "default_browse_sort"
+		const val KEY_SHIZUKU_INSTALLER = "shizuku_installer"
+		const val KEY_PRIVATE_INSTALLER = "private_installer"
+		const val KEY_AUTO_UPDATE_EXTENSIONS = "auto_update_extensions"
+		const val KEY_EXTENSION_UPDATE_NOTIFICATIONS = "extension_update_notifications"
+		const val KEY_EXTENSION_UPDATES_AVAILABLE = "extension_updates_available"
+		const val KEY_LAST_EXTENSION_UPDATE_NOTIFICATION_TIME = "last_extension_update_notification_time"
+		const val KEY_MIHON_USER_AGENT = "mihon_user_agent"
+		const val KEY_MIHON_PER_EXT_ACTIVE_LANG = "mihon_per_ext_active_lang"
+		const val KEY_MIHON_HIDDEN_PACKAGES = "mihon_hidden_packages"
+		const val KEY_EXTERNAL_EXTENSIONS_REPO_URL = "external_extensions_repo_url"
+		const val KEY_MIHON_EXTENSION_REPOS = "mihon_extension_repos"
+		const val KEY_MIHON_REPO_INFOS = "mihon_repo_infos"
+		const val KEY_HIDDEN_SOURCE_LANGUAGES = "hidden_source_languages"
+		const val KEY_EXTENSION_STORE_REGISTRY = "extension_store_registry"
+		const val KEY_EXTENSION_STORE_MIGRATED = "extension_store_migrated"
 
 		private val FLOAT_PREFERENCE_KEYS = setOf(
 			KEY_READER_DOUBLE_PAGES_SENSITIVITY,
@@ -970,8 +1130,6 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_FEED_SWIPE_GESTURES = "feed_swipe_gestures"
 		const val KEY_TRACKER_FAILURE_NOTIFICATION = "tracker_notify_fail"
 		const val KEY_TRACKER_SMART_UPDATE = "tracker_smart_update"
-		const val KEY_CONTENT_FILTER = "content_filter"
-		const val KEY_MIHON_USER_AGENT = "user_agent"
 		const val KEY_ADBLOCK = "adblock"
 		const val KEY_READER_DOUBLE_TAP_FILL = "reader_double_tap_fill"
 		const val KEY_READER_UPSCALE = "reader_upscale"
