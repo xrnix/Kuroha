@@ -4,34 +4,40 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
 	style="?materialCardViewFilledStyle"
-	android:layout_width="wrap_content"
+	android:layout_width="104dp"
 	android:layout_height="match_parent"
-	app:shapeAppearance="?shapeAppearanceCornerSmall"
+	app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+	app:cardCornerRadius="16dp"
+	app:cardElevation="0dp"
+	app:strokeWidth="0dp"
 	tools:layout_height="@dimen/search_suggestions_manga_height">
 
 	<LinearLayout
-		android:layout_width="wrap_content"
+		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:orientation="vertical">
 
 		<org.koitharu.kotatsu.image.ui.CoverImageView
 			android:id="@+id/imageView_cover"
-			android:layout_width="wrap_content"
+			android:layout_width="match_parent"
 			android:layout_height="0dp"
 			android:layout_weight="1"
 			android:scaleType="centerCrop"
-			app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Cover.Small"
 			tools:src="@tools:sample/backgrounds/scenic" />
 
 		<TextView
 			android:id="@+id/textView_title"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
+			android:background="?attr/colorSurfaceContainer"
 			android:elegantTextHeight="false"
 			android:ellipsize="end"
+			android:fontFamily="@font/google_sans_medium"
 			android:lines="1"
-			android:padding="4dp"
-			android:textAppearance="?attr/textAppearanceLabelSmall"
+			android:paddingHorizontal="8dp"
+			android:paddingVertical="6dp"
+			android:textAppearance="?attr/textAppearanceLabelMedium"
+			android:textColor="?attr/colorOnSurface"
 			tools:text="@tools:sample/lorem" />
 
 	</LinearLayout>

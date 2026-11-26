@@ -7,25 +7,28 @@
 	android:background="?selectableItemBackground"
 	android:clipToPadding="false"
 	android:gravity="center_vertical"
-	android:minHeight="?android:attr/listPreferredItemHeight"
+	android:minHeight="68dp"
 	android:orientation="vertical"
-	android:padding="4dp"
-	android:paddingStart="?android:attr/listPreferredItemPaddingStart"
-	android:paddingEnd="?android:attr/listPreferredItemPaddingEnd">
+	android:paddingHorizontal="24dp"
+	android:paddingVertical="12dp">
 
 	<TextView
 		android:id="@+id/textView_title"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:textAppearance="?android:attr/textAppearanceListItem"
-		tools:text="@string/too_many_requests_message" />
+		android:fontFamily="@font/google_sans_medium"
+		android:textAppearance="?attr/textAppearanceBodyLarge"
+		android:textColor="?attr/colorOnSurface"
+		tools:text="Default mode" />
 
 	<TextView
 		android:id="@+id/textView_summary"
-		style="@style/PreferenceSummaryTextStyle"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:layout_marginTop="2dp"
-		tools:text="@string/tap_to_try_again" />
+		android:layout_marginTop="4dp"
+		android:fontFamily="@font/google_sans_family"
+		android:textAppearance="?attr/textAppearanceBodySmall"
+		android:textColor="?attr/colorOnSurfaceVariant"
+		tools:text="Reader settings" />
 
 </LinearLayout>

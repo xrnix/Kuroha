@@ -2,112 +2,140 @@ package org.koitharu.kotatsu.settings.discord
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import android.view.inputmethod.EditorInfo
-import androidx.appcompat.app.AlertDialog
+import android.view.ViewGroup
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.viewModels
-import androidx.preference.EditTextPreference
-import androidx.preference.EditTextPreferenceDialogFragmentCompat
-import androidx.preference.Preference
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.prefs.AppSettings
-import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
-import org.koitharu.kotatsu.core.util.ext.observe
-import org.koitharu.kotatsu.core.util.ext.withArgs
 import org.koitharu.kotatsu.scrobbling.discord.ui.DiscordAuthActivity
+import org.koitharu.kotatsu.settings.compose.ActionSettingsItem
+import org.koitharu.kotatsu.settings.compose.BaseComposeSettingsFragment
+import org.koitharu.kotatsu.settings.compose.EditTextSettingsItem
+import org.koitharu.kotatsu.settings.compose.KurohaTheme
+import org.koitharu.kotatsu.settings.compose.SettingsGroup
+import org.koitharu.kotatsu.settings.compose.SettingsScaffold
+import org.koitharu.kotatsu.settings.compose.SwitchSettingsItem
+import org.koitharu.kotatsu.settings.compose.rememberBooleanPref
+import org.koitharu.kotatsu.settings.compose.rememberStringPref
 
 @AndroidEntryPoint
-class DiscordSettingsFragment : BasePreferenceFragment(R.string.discord) {
+class DiscordSettingsFragment : BaseComposeSettingsFragment(R.string.discord) {
 
 	private val viewModel by viewModels<DiscordSettingsViewModel>()
 
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		addPreferencesFromResource(R.xml.pref_discord)
-		findPreference<EditTextPreference>(AppSettings.KEY_DISCORD_TOKEN)?.let { pref ->
-			pref.dialogMessage = pref.context.getString(
-				R.string.discord_token_description,
-				pref.context.getString(R.string.sign_in),
-			)
-			pref.setOnBindEditTextListener {
-				it.setHint(R.string.discord_token_hint)
-				it.inputType = EditorInfo.TYPE_CLASS_TEXT or EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?,
+	): View = ComposeView(requireContext()).apply {
+		setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+		setContent {
+			KurohaTheme {
+				val tokenState by viewModel.tokenState.collectAsState()
+				DiscordScreen(
+					tokenState = tokenState,
+					onOpenSignIn = {
+						startActivity(Intent(requireContext(), DiscordAuthActivity::class.java))
+					},
+				)
 			}
 		}
 	}
+}
 
-	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-		super.onViewCreated(view, savedInstanceState)
-		viewModel.tokenState.observe(viewLifecycleOwner) { (state, token) ->
-			bindTokenPreference(state, token)
-		}
+@Composable
+private fun DiscordScreen(
+	tokenState: Pair<TokenState, String?>,
+	onOpenSignIn: () -> Unit,
+) {
+	var enabled by rememberBooleanPref(AppSettings.KEY_DISCORD_RPC, false)
+	var token by rememberStringPref(AppSettings.KEY_DISCORD_TOKEN, "")
+	var discordSkipNsfw by rememberBooleanPref(AppSettings.KEY_DISCORD_RPC_SKIP_NSFW, false)
+
+	val (state, stateToken) = tokenState
+	val tokenSubtitle = when (state) {
+		TokenState.EMPTY -> stringResource(R.string.discord_token_summary)
+		TokenState.REQUIRED -> stringResource(R.string.discord_token_summary)
+		TokenState.INVALID -> stringResource(R.string.invalid_token, stateToken.orEmpty())
+		TokenState.VALID -> if (stateToken.isNullOrEmpty()) stringResource(R.string.discord_token_summary) else stateToken
+		TokenState.CHECKING -> stringResource(R.string.loading_)
+	}
+	val tokenIcon = if (state == TokenState.REQUIRED || state == TokenState.INVALID) {
+		R.drawable.ic_alert_outline
+	} else {
+		R.drawable.ic_lock
 	}
 
-	override fun onDisplayPreferenceDialog(preference: Preference) {
-		if (preference is EditTextPreference && preference.key == AppSettings.KEY_DISCORD_TOKEN) {
-			if (parentFragmentManager.findFragmentByTag(TokenDialogFragment.DIALOG_FRAGMENT_TAG) != null) {
-				return
-			}
-			val f = TokenDialogFragment.newInstance(preference.key)
-			@Suppress("DEPRECATION")
-			f.setTargetFragment(this, 0)
-			f.show(parentFragmentManager, TokenDialogFragment.DIALOG_FRAGMENT_TAG)
-			return
-		}
-		super.onDisplayPreferenceDialog(preference)
-	}
-
-	private fun bindTokenPreference(state: TokenState, token: String?) {
-		val pref = findPreference<EditTextPreference>(AppSettings.KEY_DISCORD_TOKEN) ?: return
-		when (state) {
-			TokenState.EMPTY -> {
-				pref.icon = null
-				pref.setSummary(R.string.discord_token_summary)
-			}
-
-			TokenState.REQUIRED -> {
-				pref.icon = getWarningIcon()
-				pref.setSummary(R.string.discord_token_summary)
-			}
-
-			TokenState.INVALID -> {
-				pref.icon = getWarningIcon()
-				pref.summary = getString(R.string.invalid_token, token)
-			}
-
-			TokenState.VALID -> {
-				pref.icon = null
-				pref.summary = token
-			}
-
-			TokenState.CHECKING -> {
-				pref.icon = null
-				pref.setSummary(R.string.loading_)
+	SettingsScaffold {
+		item {
+			SettingsGroup {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.discord_share_reading),
+						checked = enabled,
+						onCheckedChange = { enabled = it },
+						icon = R.drawable.ic_discord,
+						main = true,
+					)
+				}
 			}
 		}
-	}
-
-	class TokenDialogFragment : EditTextPreferenceDialogFragmentCompat() {
-
-		override fun onPrepareDialogBuilder(builder: AlertDialog.Builder) {
-			super.onPrepareDialogBuilder(builder)
-			builder.setNeutralButton(R.string.sign_in) { _, _ ->
-				openSignIn()
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.accounts_and_sync)) {
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.sign_in),
+						subtitle = stringResource(R.string.discord_rpc_summary),
+						icon = R.drawable.ic_open_external,
+						onClick = onOpenSignIn,
+						shape = pos.shape,
+						enabled = enabled,
+					)
+				}
+				item { pos ->
+					EditTextSettingsItem(
+						title = stringResource(R.string.discord_token),
+						value = token,
+						hint = stringResource(R.string.discord_token_hint),
+						dialogMessage = stringResource(R.string.discord_token_description, stringResource(R.string.sign_in)),
+						icon = tokenIcon,
+						isPassword = true,
+						onValueChange = { token = it },
+						shape = pos.shape,
+						enabled = enabled,
+					)
+				}
 			}
 		}
-
-		private fun openSignIn() {
-			activity?.run {
-				startActivity(Intent(this, DiscordAuthActivity::class.java))
-			}
-		}
-
-		companion object {
-
-			const val DIALOG_FRAGMENT_TAG: String = "androidx.preference.PreferenceFragment.DIALOG"
-
-			fun newInstance(key: String) = TokenDialogFragment().withArgs(1) {
-				putString(ARG_KEY, key)
+		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
+		item {
+			SettingsGroup(title = stringResource(R.string.privacy)) {
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.hide_nsfw_from_discord),
+						subtitle = stringResource(R.string.rpc_skip_nsfw_summary),
+						checked = discordSkipNsfw,
+						onCheckedChange = { discordSkipNsfw = it },
+						icon = R.drawable.ic_disable,
+						shape = pos.shape,
+						enabled = enabled,
+					)
+				}
 			}
 		}
 	}

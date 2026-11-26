@@ -124,6 +124,7 @@
 		<item name="preferenceTheme">@style/PreferenceThemeOverlay.Kotatsu</item>
 		<!-- Fix crash in A15 -->
 		<item name="actionButtonStyle">@style/Widget.AppCompat.ActionButton</item>
+		<item name="searchViewStyle">@style/Widget.Kotatsu.SearchView.ActionBar</item>
 		<item name="materialSearchBarStyle">@style/Widget.Kotatsu.SearchBar</item>
 		<item name="materialSearchViewStyle">@style/Widget.Kotatsu.SearchView</item>
 		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>

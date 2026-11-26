@@ -9,11 +9,15 @@
 		android:layout="@layout/preference_toggle_header"
 		android:title="@string/discord_share_reading" />
 
-	<EditTextPreference
-		android:dependency="discord_rpc"
-		android:icon="@drawable/ic_lock"
-		android:key="discord_token"
-		android:summary="@string/discord_token_summary"
-		android:title="@string/discord_token" />
+	<PreferenceCategory android:title="@string/accounts_and_sync">
+
+		<EditTextPreference
+			android:dependency="discord_rpc"
+			android:icon="@drawable/ic_lock"
+			android:key="discord_token"
+			android:summary="@string/discord_token_summary"
+			android:title="@string/discord_token" />
+
+	</PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>
