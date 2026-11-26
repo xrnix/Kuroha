@@ -132,6 +132,13 @@ interface AppModule {
 				.allowRgb565(context.isLowRamDevice())
 				.eventListener(captchaHandler)
 				.components {
+					// Must precede OkHttpNetworkFetcherFactory so Mihon-source covers/posters are
+					// fetched through the extension's own HttpSource.client + headers.
+					add(
+						MihonImageFetcher.Factory(
+							extensionManager = mihonExtensionManagerProvider,
+						),
+					)
 					add(
 						OkHttpNetworkFetcherFactory(
 							callFactory = okHttpClientLazy::value,
@@ -150,11 +157,6 @@ interface AppModule {
 					add(faviconFetcherFactory)
 					add(MangaPageKeyer())
 					add(pageFetcherFactory)
-					add(
-						MihonImageFetcher.Factory(
-							extensionManager = mihonExtensionManagerProvider,
-						),
-					)
 					add(imageProxyInterceptor)
 					add(coverRestoreInterceptor)
 					add(MangaSourceHeaderInterceptor())
