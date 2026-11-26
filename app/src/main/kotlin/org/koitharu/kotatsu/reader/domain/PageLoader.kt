@@ -457,9 +457,14 @@ class PageLoader @Inject constructor(
 				if (isPrefetch) {
 					downloadSlowdownDispatcher.delay(page.source)
 				}
-				val request = createPageRequest(pageUrl, page.source)
-				val file = imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
-					response.requireBody().withProgress(progress).use {
+				val repo = getRepository(page.source)
+				val response = repo.getImageStream(pageUrl, page) ?: run {
+					val imageHeaders = repo.getImageRequestHeaders(pageUrl, page)
+					val request = createPageRequest(pageUrl, page.source, imageHeaders)
+					imageProxyInterceptor.interceptPageRequest(request, okHttp)
+				}
+				val file = response.ensureSuccess().use { r ->
+					r.requireBody().withProgress(progress).use {
 						cache.set(pageUrl, it.source(), it.contentType()?.toMimeType())
 					}
 				}
@@ -518,9 +523,16 @@ class PageLoader @Inject constructor(
 		/** No address starts like this, so the first frame of a page is never taken for the page. */
 		private const val STILL_KEY_PREFIX = "still:"
 
-		fun createPageRequest(pageUrl: String, mangaSource: MangaSource) = Request.Builder()
+		fun createPageRequest(pageUrl: String, mangaSource: MangaSource, extraHeaders: okhttp3.Headers? = null) = Request.Builder()
 			.url(pageUrl)
 			.get()
+			.apply {
+				if (extraHeaders != null) {
+					for (i in 0 until extraHeaders.size) {
+						header(extraHeaders.name(i), extraHeaders.value(i))
+					}
+				}
+			}
 			.header(CommonHeaders.ACCEPT, "image/webp,image/png;q=0.9,image/jpeg,*/*;q=0.8")
 			.cacheControl(CommonHeaders.CACHE_CONTROL_NO_STORE)
 			.tag(MangaSource::class.java, mangaSource)

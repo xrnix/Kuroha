@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Response
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
+import org.koitharu.kotatsu.core.model.isExternalSource
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
 import org.koitharu.kotatsu.core.parser.MangaRepository
@@ -44,15 +45,16 @@ class MangaPageFetcher(
 ) : Fetcher {
 
 	override suspend fun fetch(): FetchResult? {
-		if (!page.preview.isNullOrEmpty()) {
+		val repo = mangaRepositoryFactory.create(page.source)
+		if (!page.source.isExternalSource() && !page.preview.isNullOrEmpty()) {
 			runCatchingCancellable {
 				imageLoader.fetch(checkNotNull(page.preview), options)
 			}.onSuccess {
 				return it
 			}
 		}
-		val repo = mangaRepositoryFactory.create(page.source)
 		val pageUrl = repo.getPageUrl(page)
+		val imageHeaders = repo.getImageRequestHeaders(pageUrl, page)
 		if (options.diskCachePolicy.readEnabled) {
 			pagesCache[pageUrl]?.let { file ->
 				return SourceFetchResult(
@@ -62,23 +64,35 @@ class MangaPageFetcher(
 				)
 			}
 		}
-		return loadPage(pageUrl)
+		return loadPage(pageUrl, imageHeaders, repo)
 	}
 
-	private suspend fun loadPage(pageUrl: String): FetchResult? = if (pageUrl.toUri().isNetworkUri()) {
-		fetchPage(pageUrl)
-	} else {
-		imageLoader.fetch(pageUrl, options)
+	private suspend fun loadPage(pageUrl: String, imageHeaders: Headers?, repo: MangaRepository): FetchResult? {
+		repo.getImageStream(pageUrl, page)?.let {
+			return consumeResponse(it, pageUrl)
+		}
+		return if (pageUrl.toUri().isNetworkUri()) {
+			fetchPage(pageUrl, imageHeaders)
+		} else {
+			imageLoader.fetch(pageUrl, options)
+		}
 	}
 
-	private suspend fun fetchPage(pageUrl: String): FetchResult {
-		val request = PageLoader.createPageRequest(pageUrl, page.source)
-		return imageProxyInterceptor.interceptPageRequest(request, okHttpClient).use { response ->
-			if (!response.isSuccessful) {
-				throw HttpException(response.toNetworkResponse())
+	private suspend fun fetchPage(pageUrl: String, imageHeaders: Headers?): FetchResult {
+		val response = imageProxyInterceptor.interceptPageRequest(
+			PageLoader.createPageRequest(pageUrl, page.source, imageHeaders),
+			okHttpClient,
+		)
+		return consumeResponse(response, pageUrl)
+	}
+
+	private suspend fun consumeResponse(response: Response, pageUrl: String): FetchResult {
+		return response.use { r ->
+			if (!r.isSuccessful) {
+				throw HttpException(r.toNetworkResponse())
 			}
-			val mimeType = response.mimeType?.toMimeTypeOrNull()
-			val file = response.requireBody().use {
+			val mimeType = r.mimeType?.toMimeTypeOrNull()
+			val file = r.requireBody().use {
 				pagesCache.set(pageUrl, it.source(), mimeType)
 			}
 			SourceFetchResult(

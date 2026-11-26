@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.details.data.MangaDetails
+import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.reader.data.erase.HiddenImagesRepository
@@ -66,11 +67,13 @@ class ChaptersLoader @Inject constructor(
 	private val chapters = LongSparseArray<MangaChapter>()
 	private val chapterPages = ChapterPages()
 	private val mutex = Mutex()
+	private var manga: Manga? = null
 
 	val size: Int
 		get() = chapters.size()
 
 	suspend fun init(manga: MangaDetails) = mutex.withLock {
+		this.manga = manga.toManga()
 		chapters.clear()
 		manga.allChapters.forEach {
 			chapters.put(it.id, it)
@@ -182,7 +185,7 @@ class ChaptersLoader @Inject constructor(
 			source = chapter.source,
 			mayStartVerification = mayStartVerification,
 		) {
-			repo.getPages(chapter)
+			manga?.let { repo.getPages(it, chapter) } ?: repo.getPages(chapter)
 		}
 		return pages.mapIndexed { index, page ->
 			ReaderPage(page, index, chapterId)

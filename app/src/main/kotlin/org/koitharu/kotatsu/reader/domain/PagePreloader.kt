@@ -56,7 +56,7 @@ class PagePreloader @Inject constructor(
 		}
 		runCatchingCancellable {
 			val repository = repositoryFactory.create(manga.source)
-			val pages = repository.getPages(chapter)
+			val pages = repository.getPages(manga, chapter)
 			if (!withImages || !isImagePreloadAllowed(repository)) {
 				return@runCatchingCancellable
 			}
@@ -66,9 +66,13 @@ class PagePreloader @Inject constructor(
 					launch {
 						val url = repository.getPageUrl(page)
 						download(url) {
-							val request = PageLoader.createPageRequest(url, page.source)
-							imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
-								response.requireBody().use {
+							val response = repository.getImageStream(url, page) ?: run {
+								val imageHeaders = repository.getImageRequestHeaders(url, page)
+								val request = PageLoader.createPageRequest(url, page.source, imageHeaders)
+								imageProxyInterceptor.interceptPageRequest(request, okHttp)
+							}
+							response.ensureSuccess().use { r ->
+								r.requireBody().use {
 									cache.set(url, it.source(), it.contentType()?.toMimeType())
 								}
 							}

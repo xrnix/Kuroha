@@ -51,6 +51,7 @@ import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.MimeTypes
 import org.koitharu.kotatsu.core.util.Throttler
@@ -212,7 +213,7 @@ class DownloadWorker @AssistedInject constructor(
 				)
 				val coverUrl = mangaDetails.largeCoverUrl.ifNullOrEmpty { mangaDetails.coverUrl }
 				if (!coverUrl.isNullOrEmpty()) {
-					downloadFile(coverUrl, destination, repo.source, tempFiles).let { file ->
+					downloadFile(coverUrl, destination, repo, tempFiles).let { file ->
 						output.addCover(file, getMediaType(coverUrl, file))
 						file.deleteAwait()
 					}
@@ -237,7 +238,7 @@ class DownloadWorker @AssistedInject constructor(
 									runFailsafe {
 										val url = repo.getPageUrl(page)
 										val file = cache[url]
-											?: downloadFile(url, destination, repo.source, tempFiles)
+											?: downloadFile(url, destination, repo, tempFiles, page)
 										output.addPage(
 											chapter = chapter,
 											file = file,
@@ -374,9 +375,11 @@ class DownloadWorker @AssistedInject constructor(
 	private suspend fun downloadFile(
 		url: String,
 		destination: File,
-		source: MangaSource,
+		repo: MangaRepository,
 		tempFiles: MutableCollection<File>,
+		page: MangaPage? = null,
 	): File {
+		val source = repo.source
 		if (url.startsWith("content:", ignoreCase = true) || url.startsWith("file:", ignoreCase = true)) {
 			val uri = url.toUri()
 			val cr = applicationContext.contentResolver
@@ -397,9 +400,14 @@ class DownloadWorker @AssistedInject constructor(
 			}
 			return file
 		}
-		val request = PageLoader.createPageRequest(url, source)
 		slowdownDispatcher.delay(source)
-		return imageProxyInterceptor.interceptPageRequest(request, okHttp)
+		val response = (if (page != null) repo.getImageStream(url, page) else repo.getCoverStream(url))
+			?: run {
+				val imageHeaders = page?.let { repo.getImageRequestHeaders(url, it) }
+				val request = PageLoader.createPageRequest(url, source, imageHeaders)
+				imageProxyInterceptor.interceptPageRequest(request, okHttp)
+			}
+		return response
 			.ensureSuccess()
 			.use { response ->
 				var file: File? = null
