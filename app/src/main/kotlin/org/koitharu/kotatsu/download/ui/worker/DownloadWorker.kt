@@ -226,7 +226,7 @@ class DownloadWorker @AssistedInject constructor(
 						continue
 					}
 					val pages = runFailsafe {
-						repo.getPages(chapter.value)
+						repo.getPages(mangaDetails, chapter.value)
 					} ?: continue
 					val pageCounter = AtomicInteger(0)
 					channelFlow {
