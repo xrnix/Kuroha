@@ -226,6 +226,42 @@
 			</intent-filter>
 		</activity-alias>
 		<activity-alias
+			android:name="org.koitharu.kotatsu.icon.THEME_MONET_LIGHT"
+			android:enabled="false"
+			android:exported="true"
+			android:icon="@mipmap/ic_launcher_expressive_light"
+			android:roundIcon="@mipmap/ic_launcher_expressive_light"
+			android:targetActivity="org.koitharu.kotatsu.main.ui.MainActivity">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity-alias>
+		<activity-alias
+			android:name="org.koitharu.kotatsu.icon.THEME_MONET_DARK"
+			android:enabled="false"
+			android:exported="true"
+			android:icon="@mipmap/ic_launcher_expressive_dark"
+			android:roundIcon="@mipmap/ic_launcher_expressive_dark"
+			android:targetActivity="org.koitharu.kotatsu.main.ui.MainActivity">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity-alias>
+		<activity-alias
+			android:name="org.koitharu.kotatsu.icon.THEME_MONET_OLED"
+			android:enabled="false"
+			android:exported="true"
+			android:icon="@mipmap/ic_launcher_expressive_oled"
+			android:roundIcon="@mipmap/ic_launcher_expressive_oled"
+			android:targetActivity="org.koitharu.kotatsu.main.ui.MainActivity">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity-alias>
+		<activity-alias
 			android:name="org.koitharu.kotatsu.icon.THEME_MIKU_LIGHT"
 			android:enabled="false"
 			android:exported="true"

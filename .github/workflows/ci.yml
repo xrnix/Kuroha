@@ -1,13 +1,6 @@
 name: Android CI
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - 'metadata/**'
-      - '.github/workflows/new-*.yml'
   pull_request:
     branches:
       - main

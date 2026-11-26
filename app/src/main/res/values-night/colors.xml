@@ -16,9 +16,9 @@
 	<color name="nsfw_16">#FF6F00</color>
 
 	<!-- Splash Screen -->
-	<color name="splash_background">#0A0A0A</color>
-	<color name="splash_shape">#191C20</color>
-	<color name="splash_logo">#F4F2EC</color>
+	<color name="splash_background">@color/kotatsu_surface</color>
+	<color name="splash_shape">@color/kotatsu_primary</color>
+	<color name="splash_logo">@color/kotatsu_onPrimary</color>
 
 	<!-- Color schemes colors -->
 	<color name="background_miku">#191C1C</color>

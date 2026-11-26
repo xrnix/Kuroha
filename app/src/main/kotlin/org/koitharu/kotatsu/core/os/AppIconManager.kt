@@ -52,7 +52,7 @@ object AppIconManager {
 		ColorScheme.MAMIMI to intArrayOf(R.mipmap.ic_launcher_mamimi_light, R.mipmap.ic_launcher_mamimi_dark, R.mipmap.ic_launcher_mamimi_oled),
 		ColorScheme.KANADE to intArrayOf(R.mipmap.ic_launcher_kanade_light, R.mipmap.ic_launcher_kanade_dark, R.mipmap.ic_launcher_kanade_oled),
 		ColorScheme.ITSUKA to intArrayOf(R.mipmap.ic_launcher_itsuka_light, R.mipmap.ic_launcher_itsuka_dark, R.mipmap.ic_launcher_itsuka_oled),
-		ColorScheme.MONET to intArrayOf(R.mipmap.ic_launcher_default_light, R.mipmap.ic_launcher_default_dark, R.mipmap.ic_launcher_default_oled),
+		ColorScheme.MONET to intArrayOf(R.mipmap.ic_launcher_expressive_light, R.mipmap.ic_launcher_expressive_dark, R.mipmap.ic_launcher_expressive_oled),
 	)
 
 	/** Enables the alias the current settings call for and disables all the others. Blocking; call off the main thread. */

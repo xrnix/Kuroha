@@ -6,10 +6,10 @@
 	<color name="launcher_mono_bg">#000000</color>
 	<color name="launcher_mono_fg">#FFFFFF</color>
 	<color name="launcher_mono_light_fg">#000000</color>
-	<color name="launcher_default_dark_bg">#1D2024</color>
-	<color name="launcher_default_dark_fg">#A6C8FF</color>
-	<color name="launcher_default_light_bg">#EDEDF4</color>
-	<color name="launcher_default_light_fg">#3C6090</color>
+	<color name="launcher_default_dark_bg">#111318</color>
+	<color name="launcher_default_dark_fg">#ABC7FF</color>
+	<color name="launcher_default_light_bg">#F9F9FF</color>
+	<color name="launcher_default_light_fg">#0059C8</color>
 	<color name="launcher_miku_dark_bg">#1B2121</color>
 	<color name="launcher_miku_dark_fg">#6FDDE2</color>
 	<color name="launcher_miku_light_bg">#EAEFEE</color>
@@ -58,8 +58,8 @@
 	<color name="launcher_sky_dark_fg">#7DD0FF</color>
 	<color name="launcher_sky_light_bg">#EBEEF2</color>
 	<color name="launcher_sky_light_fg">#006590</color>
-	<color name="launcher_expressive_dark_bg">#1D2024</color>
-	<color name="launcher_expressive_dark_fg">#A6C8FF</color>
-	<color name="launcher_expressive_light_bg">#EDEDF4</color>
-	<color name="launcher_expressive_light_fg">#3C6090</color>
+	<color name="launcher_expressive_dark_bg">#111318</color>
+	<color name="launcher_expressive_dark_fg">#ABC7FF</color>
+	<color name="launcher_expressive_light_bg">#F9F9FF</color>
+	<color name="launcher_expressive_light_fg">#0059C8</color>
 </resources>

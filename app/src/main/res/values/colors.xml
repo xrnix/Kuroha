@@ -50,9 +50,9 @@
 	<color name="background_kanade">#F3F3F3</color>
 	<!-- The popular-source flame: fire orange in both themes, readable on light and dark surfaces. -->
 	<color name="hot_source_flame">#FF6D00</color>
-	<color name="splash_background">#0F1012</color>
-	<color name="splash_shape">#191C20</color>
-	<color name="splash_logo">#F4F2EC</color>
+	<color name="splash_background">@color/kotatsu_surface</color>
+	<color name="splash_shape">@color/kotatsu_primary</color>
+	<color name="splash_logo">@color/kotatsu_onPrimary</color>
 	<color name="list_badge_favourite">#FF8FAB</color>
 	<color name="list_badge_saved">#8FD0FF</color>
 </resources>

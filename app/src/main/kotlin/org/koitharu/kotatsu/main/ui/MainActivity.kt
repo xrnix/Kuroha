@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.main.ui
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.content.res.ColorStateList
@@ -14,10 +15,12 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.widget.LinearLayout
 import androidx.activity.viewModels
 import androidx.appcompat.view.ActionMode
+import androidx.core.animation.doOnEnd
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.core.view.MenuProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -160,6 +163,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			val introStart = Process.getStartUptimeMillis().takeIf { now - it < COLD_START_MAX_MS } ?: now
 			val introEnd = introStart + resources.getInteger(R.integer.splash_screen_duration)
 			splash.setKeepOnScreenCondition { SystemClock.uptimeMillis() < introEnd }
+			splash.setOnExitAnimationListener { splashScreenViewProvider ->
+				val fadeOut = ObjectAnimator.ofFloat(
+					splashScreenViewProvider.view,
+					View.ALPHA,
+					1f,
+					0f
+				).apply {
+					interpolator = FastOutSlowInInterpolator()
+					duration = 300L
+					doOnEnd { splashScreenViewProvider.remove() }
+				}
+				fadeOut.start()
+			}
 		}
 
 		setSupportActionBar(viewBinding.searchBar)
