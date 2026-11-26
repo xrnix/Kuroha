@@ -125,6 +125,7 @@
 		<!-- Fix crash in A15 -->
 		<item name="actionButtonStyle">@style/Widget.AppCompat.ActionButton</item>
 		<item name="searchViewStyle">@style/Widget.Kotatsu.SearchView.ActionBar</item>
+		<item name="autoCompleteTextViewStyle">@style/Widget.Kotatsu.AutoCompleteTextView</item>
 		<item name="materialSearchBarStyle">@style/Widget.Kotatsu.SearchBar</item>
 		<item name="materialSearchViewStyle">@style/Widget.Kotatsu.SearchView</item>
 		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
@@ -258,6 +259,8 @@
 		<item name="materialSearchBarStyle">@style/Widget.Kotatsu.SearchBar</item>
 		<item name="materialSearchViewStyle">@style/Widget.Kotatsu.SearchView</item>
 		<item name="materialSearchViewToolbarHeight">@dimen/search_bar_min_height</item>
+		<item name="searchViewStyle">@style/Widget.Kotatsu.SearchView.ActionBar</item>
+		<item name="autoCompleteTextViewStyle">@style/Widget.Kotatsu.AutoCompleteTextView</item>
 
 		<item name="toolbarStyle">@style/Widget.Kotatsu.Toolbar</item>
 		<item name="toolbarSurfaceStyle">@style/Widget.Material3Expressive.Toolbar.Surface</item>

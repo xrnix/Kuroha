@@ -180,11 +180,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		setSupportActionBar(viewBinding.searchBar)
 		viewBinding.searchBar.textView.apply {
-			includeFontPadding = false
-			(layoutParams as? android.widget.FrameLayout.LayoutParams)?.apply {
-				gravity = android.view.Gravity.CENTER
-			}
 			gravity = android.view.Gravity.CENTER
+			includeFontPadding = false
 			setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
 			val topBarIconTint = ColorStateList.valueOf(context.getThemeColor(R.attr.colorTopBarIcon))
 			TextViewCompat.setCompoundDrawableTintList(this, topBarIconTint)

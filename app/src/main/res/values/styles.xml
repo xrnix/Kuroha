@@ -68,16 +68,19 @@
 	-->
 	<style name="Widget.Kotatsu.AutoCompleteTextView" parent="Widget.AppCompat.AutoCompleteTextView">
 		<item name="android:gravity">center_vertical|start</item>
+		<item name="android:includeFontPadding">false</item>
 		<item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
 		<item name="android:textColor">?attr/colorOnSurface</item>
 		<item name="android:textColorHint">?attr/colorOnSurfaceVariant</item>
-		<item name="android:fontFamily">@font/google_sans_family</item>
-		<item name="fontFamily">@font/google_sans_family</item>
+		<item name="android:fontFamily">@font/google_sans_medium</item>
+		<item name="fontFamily">@font/google_sans_medium</item>
 	</style>
 
-	<style name="Widget.Kotatsu.SearchView.ActionBar" parent="Widget.AppCompat.SearchView">
+	<style name="Widget.Kotatsu.SearchView.ActionBar" parent="Widget.AppCompat.SearchView.ActionBar">
+		<item name="android:maxWidth">10000dp</item>
 		<item name="queryBackground">@drawable/bg_search_plate_m3</item>
 		<item name="submitBackground">@null</item>
+		<item name="searchHintIcon">@null</item>
 		<item name="searchIcon">@drawable/ic_search</item>
 		<item name="closeIcon">@drawable/ic_search_close</item>
 		<item name="commitIcon">@drawable/ic_north_west</item>
