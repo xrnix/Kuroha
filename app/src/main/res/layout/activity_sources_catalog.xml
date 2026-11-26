@@ -74,10 +74,13 @@
 
 		<com.google.android.material.tabs.TabLayout
 			android:id="@+id/tabs"
+			style="@style/Widget.Material3.TabLayout.Secondary"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:background="@null"
 			app:tabGravity="start"
+			app:tabIndicatorAnimationMode="elastic"
+			app:tabIndicatorFullWidth="false"
 			app:tabMode="scrollable" />
 
 	</com.google.android.material.appbar.AppBarLayout>
@@ -90,19 +93,20 @@
 
 	<com.google.android.material.floatingactionbutton.FloatingActionButton
 		android:id="@+id/button_scroll_to_top"
+		style="@style/Widget.Material3.FloatingActionButton.Small.Secondary"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_gravity="bottom|center_horizontal"
 		android:layout_marginBottom="@dimen/margin_normal"
 		android:contentDescription="@string/back_to_top"
 		android:visibility="gone"
-		app:backgroundTint="?attr/colorSurface"
+		app:backgroundTint="?attr/colorSecondaryContainer"
 		app:borderWidth="0dp"
-		app:elevation="0dp"
+		app:elevation="2dp"
 		app:fabCustomSize="40dp"
 		app:maxImageSize="18dp"
 		app:pressedTranslationZ="0dp"
 		app:srcCompat="@drawable/ic_arrow_up"
-		app:tint="?attr/colorOnSurfaceVariant" />
+		app:tint="?attr/colorOnSecondaryContainer" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
