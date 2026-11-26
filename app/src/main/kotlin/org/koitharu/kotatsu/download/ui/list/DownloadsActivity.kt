@@ -13,13 +13,13 @@ import androidx.core.view.updatePadding
 import coil3.ImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.util.ext.roundTopCorners
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.list.ListSelectionController
 import org.koitharu.kotatsu.core.ui.list.RecyclerScrollKeeper
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
-import org.koitharu.kotatsu.core.ui.util.applyTonalTopBarStyle
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
 import org.koitharu.kotatsu.databinding.ActivityDownloadsBinding
@@ -45,7 +45,6 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityDownloadsBinding.inflate(layoutInflater))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
-		findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.applyTonalTopBarStyle()
 		val downloadsAdapter = DownloadsAdapter(this, this)
 		val decoration = TypedListSpacingDecoration(this, false)
 		selectionController = ListSelectionController(
@@ -55,6 +54,10 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 			callback = this,
 		)
 		with(viewBinding.recyclerView) {
+			roundTopCorners(
+				radius = resources.getDimension(R.dimen.tile_corner),
+				extraInset = resources.getDimensionPixelOffset(R.dimen.list_spacing_normal),
+			)
 			setHasFixedSize(true)
 			addItemDecoration(decoration)
 			adapter = downloadsAdapter
@@ -67,6 +70,7 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		val menuInvalidator = MenuInvalidator(this)
 		viewModel.hasActiveWorks.observe(this, menuInvalidator)
 		viewModel.hasPausedWorks.observe(this, menuInvalidator)
+		viewModel.hasFailedWorks.observe(this, menuInvalidator)
 		viewModel.hasCancellableWorks.observe(this, menuInvalidator)
 	}
 
@@ -102,7 +106,7 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 		return selectionController.onItemContextClick(view, item.id.mostSignificantBits)
 	}
 
-	override fun onExpandClick(item: DownloadItemModel) {
+	override fun onExpandClick(item: DownloadItemModel, view: View) {
 		if (!selectionController.onItemClick(item.id.mostSignificantBits)) {
 			viewModel.expandCollapse(item)
 		}
@@ -118,6 +122,10 @@ class DownloadsActivity : BaseActivity<ActivityDownloadsBinding>(),
 
 	override fun onResumeClick(item: DownloadItemModel) {
 		scheduler.resume(item.id)
+	}
+
+	override fun onRetryClick(item: DownloadItemModel) {
+		viewModel.retry(item.id)
 	}
 
 	override fun onSkipClick(item: DownloadItemModel) {
