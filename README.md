@@ -26,6 +26,8 @@ Kuroha is an open-source reader built with native Material 3 Expressive UI, an i
 [![Stars](https://img.shields.io/github/stars/xrnix/Kuroha?style=social)](https://github.com/xrnix/Kuroha/stargazers)
 
 [![Download APK](https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/xrnix/Kuroha/releases/latest)
+[![Website](https://img.shields.io/badge/Website-xrnix.pages.dev-6750A4?style=for-the-badge&logo=cloudflarepages&logoColor=white)](https://xrnix.pages.dev)
+[![Docs](https://img.shields.io/badge/Docs-User_Manual-0288D1?style=for-the-badge&logo=readthedocs&logoColor=white)](https://xrnix.pages.dev/docs)
 
 **Open Source · No Ads · No Telemetry · Zero External APK Plugins Required**
 

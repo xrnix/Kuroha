@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-	ACRA's "send a report?" prompt, restyled to match the rest of the app.
-
-	Same shape as dialog_manga_unavailable: a tonal hero, a headline, supporting text, then one
-	full-width action and a quiet way out. ACRA's stock dialog is a light @android:style/Theme.Dialog,
-	which looked like a system error from another decade sitting on top of a dark Material app.
--->
 <androidx.core.widget.NestedScrollView
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -21,17 +14,17 @@
 		android:paddingStart="?dialogPreferredPadding"
 		android:paddingTop="24dp"
 		android:paddingEnd="?dialogPreferredPadding"
-		android:paddingBottom="?dialogPreferredPadding">
+		android:paddingBottom="16dp">
 
 		<FrameLayout
-			android:layout_width="72dp"
-			android:layout_height="72dp"
+			android:layout_width="64dp"
+			android:layout_height="64dp"
 			android:layout_gravity="center_horizontal"
 			android:background="@drawable/bg_dialog_hero_error">
 
 			<ImageView
-				android:layout_width="36dp"
-				android:layout_height="36dp"
+				android:layout_width="32dp"
+				android:layout_height="32dp"
 				android:layout_gravity="center"
 				android:contentDescription="@null"
 				android:src="@drawable/ic_alert_outline"
@@ -42,7 +35,7 @@
 		<TextView
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="20dp"
+			android:layout_marginTop="18dp"
 			android:gravity="center_horizontal"
 			android:text="@string/error_occurred"
 			android:textAlignment="center"
@@ -52,22 +45,75 @@
 		<TextView
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="10dp"
+			android:layout_marginTop="8dp"
 			android:gravity="center_horizontal"
-			android:text="@string/crash_text"
+			android:text="@string/crash_subtitle_local"
 			android:textAlignment="center"
 			android:textAppearance="?textAppearanceBodyMedium"
 			android:textColor="?android:textColorSecondary" />
 
 		<com.google.android.material.button.MaterialButton
-			android:id="@android:id/button1"
+			android:id="@+id/button_toggle_details"
+			style="@style/Widget.Material3.Button.TextButton"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal"
+			android:layout_marginTop="8dp"
+			android:text="@string/show_crash_details" />
+
+		<com.google.android.material.card.MaterialCardView
+			android:id="@+id/card_details"
+			style="@style/Widget.Material3.CardView.Filled"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:layout_marginTop="24dp"
+			android:layout_marginTop="8dp"
+			android:visibility="gone"
+			app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
+			app:cardCornerRadius="16dp"
+			tools:visibility="visible">
+
+			<HorizontalScrollView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:padding="12dp">
+
+				<TextView
+					android:id="@+id/text_stacktrace"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:fontFamily="monospace"
+					android:maxLines="12"
+					android:textAppearance="?textAppearanceBodySmall"
+					android:textColor="?android:textColorSecondary"
+					android:textIsSelectable="true"
+					tools:text="java.lang.IllegalStateException: ..." />
+
+			</HorizontalScrollView>
+
+		</com.google.android.material.card.MaterialCardView>
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_restart"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="20dp"
 			android:insetTop="0dp"
 			android:insetBottom="0dp"
-			android:minHeight="64dp"
-			android:text="@string/send"
+			android:minHeight="56dp"
+			android:text="@string/restart_app"
+			app:shapeAppearance="?shapeAppearanceCornerLarge"
+			tools:ignore="VisualLintButtonSize" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_copy"
+			style="@style/Widget.Material3.Button.TonalButton"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minHeight="48dp"
+			android:text="@string/copy_crash_log"
 			app:shapeAppearance="?shapeAppearanceCornerLarge"
 			tools:ignore="VisualLintButtonSize" />
 
@@ -77,8 +123,8 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_gravity="center_horizontal"
-			android:layout_marginTop="10dp"
-			android:text="@string/no_thanks" />
+			android:layout_marginTop="6dp"
+			android:text="@string/close" />
 
 	</LinearLayout>
 

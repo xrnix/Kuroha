@@ -24,6 +24,7 @@ class Replica(
 	@SerialName("feed") val feed: List<RFeed> = emptyList(),
 	@SerialName("manga_prefs") val mangaPrefs: List<RMangaPrefs> = emptyList(),
 	@SerialName("prefs") val prefs: List<RPref> = emptyList(),
+	@SerialName("sources") val sources: List<RSource> = emptyList(),
 	@SerialName("tombstones") val tombstones: List<RTombstone> = emptyList(),
 ) {
 
@@ -169,6 +170,18 @@ data class RPref(
 	@SerialName("v") override val v: Long,
 ) : SyncRecord {
 	override val key get() = "$file/$prefKey"
+}
+
+/** One Kotatsu source's enabled/pinned/sort state. */
+@Serializable
+data class RSource(
+	@SerialName("source") val source: String,
+	@SerialName("enabled") val isEnabled: Boolean,
+	@SerialName("sort_key") val sortKey: Int,
+	@SerialName("pinned") val isPinned: Boolean,
+	@SerialName("v") override val v: Long,
+) : SyncRecord {
+	override val key get() = source
 }
 
 /** A deleted row of [table], identified by the same [key] its live record would have. */

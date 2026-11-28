@@ -1,24 +1,46 @@
 package org.koitharu.kotatsu.local.ui
 
 import android.net.Uri
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.OpenDocumentTreeHelper
-import org.koitharu.kotatsu.core.ui.AlertDialogFragment
+import org.koitharu.kotatsu.core.ui.ComposeAlertDialogFragment
+import org.koitharu.kotatsu.core.ui.dialog.DialogCornerAction
+import org.koitharu.kotatsu.core.ui.dialog.ExpressiveDialogCard
+import org.koitharu.kotatsu.core.ui.dialog.expressiveGroupItemShape
+import org.koitharu.kotatsu.core.util.ext.resolveName
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
-import org.koitharu.kotatsu.databinding.DialogImportBinding
 import org.koitharu.kotatsu.local.data.LocalStorageManager
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ImportDialogFragment : AlertDialogFragment<DialogImportBinding>(), View.OnClickListener {
+class ImportDialogFragment : ComposeAlertDialogFragment() {
 
 	@Inject
 	lateinit var storageManager: LocalStorageManager
@@ -30,36 +52,106 @@ class ImportDialogFragment : AlertDialogFragment<DialogImportBinding>(), View.On
 		startImport(listOfNotNull(it))
 	}
 
-	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): DialogImportBinding {
-		return DialogImportBinding.inflate(inflater, container, false)
-	}
-
-	override fun onBuildDialog(builder: MaterialAlertDialogBuilder): MaterialAlertDialogBuilder {
-		return super.onBuildDialog(builder)
-			.setTitle(R.string._import)
-			.setNegativeButton(android.R.string.cancel, null)
-			.setCancelable(true)
-	}
-
-	override fun onViewBindingCreated(binding: DialogImportBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
-		binding.buttonDir.setOnClickListener(this)
-		binding.buttonFile.setOnClickListener(this)
-	}
-
-	override fun onClick(v: View) {
-		val res = when (v.id) {
-			R.id.button_file -> importFileCall.tryLaunch(arrayOf("*/*"))
-			R.id.button_dir -> importDirCall.tryLaunch(null)
-			else -> true
+	@Composable
+	override fun Content() {
+		ExpressiveDialogCard(
+			icon = painterResource(R.drawable.ic_file_zip),
+			title = stringResource(R.string._import),
+			cornerAction = DialogCornerAction(
+				icon = painterResource(R.drawable.ic_close),
+				label = stringResource(android.R.string.cancel),
+				onClick = ::dismiss,
+			),
+		) {
+			ImportChoice(
+				index = 0,
+				count = 2,
+				icon = R.drawable.ic_file_zip,
+				title = R.string.comics_archive,
+				subtitle = R.string.comics_archive_import_description,
+			) {
+				launch(
+					importFileCall.tryLaunch(
+						arrayOf("application/zip", "application/x-cbz", "application/vnd.comicbook-rar", "application/x-cbr", "application/pdf", "application/epub+zip", "*/*"),
+					),
+				)
+			}
+			Spacer(Modifier.height(2.dp))
+			ImportChoice(
+				index = 1,
+				count = 2,
+				icon = R.drawable.ic_folder_file,
+				title = R.string.folder_with_images,
+				subtitle = R.string.folder_with_images_import_description,
+			) {
+				launch(importDirCall.tryLaunch(null))
+			}
 		}
-		if (!res) {
-			Toast.makeText(v.context, R.string.operation_not_supported, Toast.LENGTH_SHORT).show()
+	}
+
+	@Composable
+	private fun ImportChoice(
+		index: Int,
+		count: Int,
+		@DrawableRes icon: Int,
+		@StringRes title: Int,
+		@StringRes subtitle: Int,
+		onClick: () -> Unit,
+	) {
+		val colors = MaterialTheme.colorScheme
+		Surface(
+			onClick = onClick,
+			shape = expressiveGroupItemShape(index, count),
+			color = colors.background,
+			contentColor = colors.onSurface,
+			modifier = Modifier.fillMaxWidth(),
+		) {
+			Row(
+				modifier = Modifier.padding(16.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				Box(
+					modifier = Modifier
+						.size(48.dp)
+						.background(colors.secondaryContainer, RoundedCornerShape(14.dp)),
+					contentAlignment = Alignment.Center,
+				) {
+					Icon(
+						painter = painterResource(icon),
+						contentDescription = null,
+						tint = colors.onSecondaryContainer,
+						modifier = Modifier.size(26.dp),
+					)
+				}
+				Spacer(Modifier.width(16.dp))
+				Column(modifier = Modifier.weight(1f)) {
+					Text(
+						text = stringResource(title),
+						style = MaterialTheme.typography.titleMedium,
+						color = colors.onSurface,
+					)
+					Text(
+						text = stringResource(subtitle),
+						style = MaterialTheme.typography.bodySmall,
+						color = colors.onSurfaceVariant,
+					)
+				}
+			}
+		}
+	}
+
+	private fun launch(result: Boolean) {
+		if (!result) {
+			Toast.makeText(requireContext(), R.string.operation_not_supported, Toast.LENGTH_SHORT).show()
 		}
 	}
 
 	private fun startImport(uris: Collection<Uri>) {
 		if (uris.isEmpty()) {
+			return
+		}
+		if (uris.any { !it.isDirectoryUri() && !it.isSupportedArchiveFile() }) {
+			Toast.makeText(requireContext(), R.string.text_file_not_supported, Toast.LENGTH_LONG).show()
 			return
 		}
 		uris.forEach {
@@ -73,5 +165,19 @@ class ImportDialogFragment : AlertDialogFragment<DialogImportBinding>(), View.On
 		}
 		Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
 		dismiss()
+	}
+
+	private fun Uri.isDirectoryUri(): Boolean {
+		val ctx = context ?: return false
+		return runCatching {
+			DocumentFile.fromTreeUri(ctx, this)?.isDirectory == true
+		}.getOrDefault(false)
+	}
+
+	private fun Uri.isSupportedArchiveFile(): Boolean {
+		return runCatching {
+			val name = storageManager.contentResolver.resolveName(this)
+			!name.isNullOrBlank() && (name.endsWith(".cbz", ignoreCase = true) || name.endsWith(".zip", ignoreCase = true))
+		}.getOrDefault(false)
 	}
 }

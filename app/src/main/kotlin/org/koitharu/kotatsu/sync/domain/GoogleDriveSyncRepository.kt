@@ -300,6 +300,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			feed = section(SyncContent.FEED, SyncTriggers.FEED) { it.feed },
 			mangaPrefs = section(SyncContent.CUSTOM_COVERS, SyncTriggers.MANGA_PREFS) { it.mangaPrefs },
 			prefs = section(SyncContent.SETTINGS, null) { it.prefs }.let { if (isJoining) adoptRemoteFiles(it, local, remotes) else it },
+			sources = section(SyncContent.SETTINGS, SyncTriggers.SOURCES) { it.sources },
 		)
 	}
 
@@ -321,6 +322,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 		local.feed.remember(SyncTriggers.FEED)
 		local.mangaPrefs.remember(SyncTriggers.MANGA_PREFS)
 		local.prefs.remember(PREFS)
+		local.sources.remember(SyncTriggers.SOURCES)
 		local.tombstones.forEach { known += "${it.table}/${it.key}" }
 		fun <T : SyncRecord> List<T>.missing(table: String) = filterNot { "$table/${it.key}" in known }
 		return Replica(
@@ -336,6 +338,7 @@ class GoogleDriveSyncRepository @Inject constructor(
 			feed = own.feed.missing(SyncTriggers.FEED),
 			mangaPrefs = own.mangaPrefs.missing(SyncTriggers.MANGA_PREFS),
 			prefs = own.prefs.missing(PREFS),
+			sources = own.sources.missing(SyncTriggers.SOURCES),
 			tombstones = own.tombstones.filterNot { "${it.table}/${it.key}" in known },
 		)
 	}

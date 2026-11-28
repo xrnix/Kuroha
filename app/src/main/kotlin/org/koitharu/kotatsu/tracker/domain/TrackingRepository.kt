@@ -88,6 +88,10 @@ class TrackingRepository @Inject constructor(
 		// advanced, so they permanently sort to the front of the batch. Filtering them after
 		// the SQL LIMIT would let them occupy batch slots forever, starving the rest of the
 		// queue — page through until the requested amount of checkable tracks is collected.
+		val smartUpdateRules = settings.trackerSmartUpdateRules
+		val skipCompleted = AppSettings.SMART_UPDATE_SKIP_COMPLETED in smartUpdateRules
+		val skipUnstarted = AppSettings.SMART_UPDATE_SKIP_UNSTARTED in smartUpdateRules
+		val skipUnread = AppSettings.SMART_UPDATE_SKIP_UNREAD in smartUpdateRules
 		val result = ArrayList<MangaTracking>(if (limit == Int.MAX_VALUE) 16 else limit)
 		var currentOffset = offset
 		while (result.size < limit) {
@@ -96,6 +100,9 @@ class TrackingRepository @Inject constructor(
 				limit = limit - result.size,
 				minActivityTime = minActivityTime,
 				staleCheckTime = staleCheckTime,
+				skipCompleted = skipCompleted,
+				skipUnstarted = skipUnstarted,
+				skipUnread = skipUnread,
 			)
 			if (window.isEmpty()) {
 				break
@@ -374,6 +381,43 @@ class TrackingRepository @Inject constructor(
 				)
 			}
 		}
+	}
+
+	suspend fun getReleaseCalendarEntries(): List<org.koitharu.kotatsu.tracker.ui.calendar.ReleaseCalendarEntry> {
+		val rows = db.getTracksDao().findAllWithLastChapter()
+		if (rows.isEmpty()) return emptyList()
+		val dayMillis = java.util.concurrent.TimeUnit.DAYS.toMillis(1)
+		return rows.mapNotNull { row ->
+			val manga = row.manga.toManga(emptySet(), null)
+			if (manga.state != null && manga.state != org.koitharu.kotatsu.parsers.model.MangaState.ONGOING) {
+				return@mapNotNull null
+			}
+			val uploadDates = db.getChaptersDao().findUploadDates(
+				mangaId = manga.id,
+				chapterId = row.track.lastChapterId,
+				limit = RELEASE_DATES_LIMIT,
+			)
+			val days = (uploadDates + row.track.lastChapterDate)
+				.asSequence()
+				.filter { it > 0L }
+				.map { it / dayMillis }
+				.distinct()
+				.sortedDescending()
+				.take(StaleTrackPolicy.MAX_RELEASE_DAYS)
+				.toList()
+			if (days.size < 3) {
+				return@mapNotNull null
+			}
+			val gaps = days.zipWithNext { newer, older -> newer - older }.sorted()
+			val medianGapDays = gaps[gaps.size / 2].coerceIn(1L, 60L)
+			val nextExpectedDate = row.track.lastChapterDate + medianGapDays * dayMillis
+			org.koitharu.kotatsu.tracker.ui.calendar.ReleaseCalendarEntry(
+				manga = manga,
+				lastChapterDate = row.track.lastChapterDate,
+				medianGapDays = medianGapDays,
+				nextExpectedDate = nextExpectedDate,
+			)
+		}.sortedBy { it.nextExpectedDate }
 	}
 
 	private suspend fun gcIfNotCalled() {

@@ -133,7 +133,13 @@ class DownloadWorker @AssistedInject constructor(
 	override suspend fun doWork(): Result {
 		setForeground(getForegroundInfo())
 		val manga = mangaDataRepository.findMangaById(task.mangaId, withChapters = true) ?: return Result.failure()
-		publishState(DownloadState(manga = manga, isIndeterminate = true).also { lastPublishedState = it })
+		publishState(
+			DownloadState(
+				manga = manga,
+				isIndeterminate = true,
+				priority = task.priority,
+			).also { lastPublishedState = it },
+		)
 		val downloadedIds = getDoneChapters(manga)
 		return try {
 			val pausingHandle = PausingHandle()
@@ -570,20 +576,42 @@ class DownloadWorker @AssistedInject constructor(
 			}
 		}
 
+		suspend fun setPriority(id: UUID, priority: Int) {
+			val task = getTask(id) ?: return
+			if (task.priority == priority) return
+			val updated = task.copy(priority = priority)
+			workManager.cancelWorkById(id).await()
+			workManager.deleteWork(id)
+			val builder = OneTimeWorkRequestBuilder<DownloadWorker>()
+				.setConstraints(createConstraints(updated.allowMeteredNetwork))
+				.addTag(TAG)
+				.keepResultsForAtLeast(30, TimeUnit.DAYS)
+				.setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
+				.setInputData(updated.toData())
+				.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+			if (priority > DownloadTask.PRIORITY_NORMAL) {
+				builder.addTag(TAG_HIGH_PRIORITY)
+			}
+			workManager.enqueue(builder.build()).await()
+		}
+
 		suspend fun schedule(tasks: Collection<Pair<Manga, DownloadTask>>) {
 			if (tasks.isEmpty()) {
 				return
 			}
 			val requests = tasks.map { (manga, task) ->
 				mangaDataRepository.storeManga(manga, replaceExisting = true)
-				OneTimeWorkRequestBuilder<DownloadWorker>()
+				val builder = OneTimeWorkRequestBuilder<DownloadWorker>()
 					.setConstraints(createConstraints(task.allowMeteredNetwork))
 					.addTag(TAG)
 					.keepResultsForAtLeast(30, TimeUnit.DAYS)
 					.setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
 					.setInputData(task.toData())
 					.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-					.build()
+				if (task.priority > DownloadTask.PRIORITY_NORMAL) {
+					builder.addTag(TAG_HIGH_PRIORITY)
+				}
+				builder.build()
 			}
 			workManager.enqueue(requests).await()
 		}
@@ -600,5 +628,6 @@ class DownloadWorker @AssistedInject constructor(
 		const val DOWNLOAD_ERROR_DELAY = 2_000L
 		const val MAX_RETRY_DELAY = 7_200_000L // 2 hours
 		const val TAG = "download"
+		const val TAG_HIGH_PRIORITY = "download_high_priority"
 	}
 }

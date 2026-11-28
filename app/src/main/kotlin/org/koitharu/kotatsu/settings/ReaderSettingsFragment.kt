@@ -127,8 +127,9 @@ private fun ReaderScreen(
 	var webtoonZoom by rememberBooleanPref(AppSettings.KEY_WEBTOON_ZOOM, true)
 	var webtoonZoomOut by rememberIntPref(AppSettings.KEY_WEBTOON_ZOOM_OUT, 0)
 	var webtoonGaps by rememberBooleanPref(AppSettings.KEY_WEBTOON_GAPS, false)
-	var doublePages by rememberBooleanPref(AppSettings.KEY_READER_DOUBLE_PAGES, true)
-	var doublePagesFoldable by rememberBooleanPref(AppSettings.KEY_READER_DOUBLE_FOLDABLE, true)
+	var doublePages by rememberBooleanPref(AppSettings.KEY_READER_DOUBLE_PAGES, false)
+	var doubleLandscapeOnly by rememberBooleanPref(AppSettings.KEY_READER_DOUBLE_LANDSCAPE_ONLY, false)
+	var doublePagesFoldable by rememberBooleanPref(AppSettings.KEY_READER_DOUBLE_FOLDABLE, false)
 	var doublePagesSensitivity by rememberPercentPref(AppSettings.KEY_READER_DOUBLE_PAGES_SENSITIVITY, 0.5f)
 	var readerTapsLtr by rememberBooleanPref(AppSettings.KEY_READER_CONTROL_LTR, false)
 	var readerVolumeButtons by rememberBooleanPref(AppSettings.KEY_READER_VOLUME_BUTTONS, false)
@@ -304,10 +305,19 @@ private fun ReaderScreen(
 			SettingsGroup(title = "Two pages") {
 				item { pos ->
 					SwitchSettingsItem(
-						title = stringResource(R.string.use_two_pages_landscape),
+						title = stringResource(R.string.two_page_layout),
 						checked = doublePages,
 						onCheckedChange = { doublePages = it },
 						icon = R.drawable.ic_split_horizontal,
+						shape = pos.shape,
+					)
+				}
+				item { pos ->
+					SwitchSettingsItem(
+						title = stringResource(R.string.landscape_only),
+						checked = doubleLandscapeOnly,
+						onCheckedChange = { doubleLandscapeOnly = it },
+						enabled = doublePages,
 						shape = pos.shape,
 					)
 				}

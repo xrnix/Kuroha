@@ -50,6 +50,37 @@ abstract class StatsDao {
 	@Upsert
 	abstract suspend fun upsert(entity: StatsEntity)
 
+	suspend fun getDurationStats(fromDate: Long, favouriteCategories: Set<Long>): Map<MangaEntity, Long> {
+		val where = statsWhereClause(fromDate, favouriteCategories)
+		val query = SimpleSQLiteQuery(
+			"SELECT manga.*, SUM(duration) AS d FROM stats JOIN manga ON manga.manga_id = stats.manga_id WHERE $where GROUP BY manga.manga_id ORDER BY d DESC",
+		)
+		return getDurationStatsImpl(query)
+	}
+
+	suspend fun getSessions(fromDate: Long, favouriteCategories: Set<Long>): List<StatsEntity> {
+		val where = statsWhereClause(fromDate, favouriteCategories)
+		return getSessionsImpl(
+			SimpleSQLiteQuery(
+				"SELECT stats.* FROM stats JOIN manga ON manga.manga_id = stats.manga_id WHERE $where ORDER BY started_at",
+			),
+		)
+	}
+
+	@RawQuery
+	protected abstract suspend fun getSessionsImpl(query: SupportSQLiteQuery): List<StatsEntity>
+
+	private fun statsWhereClause(fromDate: Long, favouriteCategories: Set<Long>): String {
+		val conditions = ArrayList<String>(3)
+		conditions.add("(SELECT deleted_at FROM history WHERE history.manga_id = stats.manga_id) = 0")
+		conditions.add("stats.started_at >= $fromDate")
+		if (favouriteCategories.isNotEmpty()) {
+			val ids = favouriteCategories.joinToString(",")
+			conditions.add("stats.manga_id IN (SELECT manga_id FROM favourites WHERE category_id IN ($ids) AND deleted_at = 0)")
+		}
+		return conditions.joinToString(separator = " AND ")
+	}
+
 	suspend fun getDurationStats(
 		fromDate: Long,
 		isNsfw: Boolean?,

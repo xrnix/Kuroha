@@ -8,6 +8,7 @@ import org.koitharu.kotatsu.sync.domain.CustomCoverCodec
 import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.MangaPrefsEntity
+import org.koitharu.kotatsu.core.db.entity.MangaSourceEntity
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.favourites.data.FavouriteCategoryEntity
 import org.koitharu.kotatsu.favourites.data.FavouriteEntity
@@ -27,6 +28,7 @@ import org.koitharu.kotatsu.sync.data.model.RHistory
 import org.koitharu.kotatsu.sync.data.model.RMangaPrefs
 import org.koitharu.kotatsu.sync.data.model.RPref
 import org.koitharu.kotatsu.sync.data.model.RScrobbling
+import org.koitharu.kotatsu.sync.data.model.RSource
 import org.koitharu.kotatsu.sync.data.model.RStats
 import org.koitharu.kotatsu.tracker.data.TrackEntity
 import org.koitharu.kotatsu.tracker.data.TrackLogEntity
@@ -43,11 +45,13 @@ class SyncChanges(
 	val feed: ReplicaMerger.Changes<RFeed>,
 	val mangaPrefs: ReplicaMerger.Changes<RMangaPrefs>,
 	val prefs: ReplicaMerger.Changes<RPref>,
+	val sources: ReplicaMerger.Changes<RSource>,
 ) {
 
 	val isEmpty
 		get() = categories.isEmpty && favourites.isEmpty && history.isEmpty && stats.isEmpty &&
-			bookmarks.isEmpty && scrobblings.isEmpty && feed.isEmpty && mangaPrefs.isEmpty && prefs.isEmpty
+			bookmarks.isEmpty && scrobblings.isEmpty && feed.isEmpty && mangaPrefs.isEmpty &&
+			prefs.isEmpty && sources.isEmpty
 }
 
 /**
@@ -316,6 +320,27 @@ class ReplicaApplier @Inject constructor(
 
 		if (!changes.prefs.isEmpty) {
 			syncPrefs.apply(changes.prefs.upserts, categoryIds)
+		}
+
+		if (!changes.sources.isEmpty) {
+			inChunks(changes.sources.upserts) { s ->
+				if (!canWrite(SyncTriggers.SOURCES, s.source, s.v)) return@inChunks
+				val updated = syncDao.updateSourceState(s.source, s.isEnabled, s.sortKey, s.isPinned)
+				if (updated == 0) {
+					syncDao.upsertSource(
+						MangaSourceEntity(
+							source = s.source,
+							isEnabled = s.isEnabled,
+							sortKey = s.sortKey,
+							addedIn = 0,
+							lastUsedAt = 0L,
+							isPinned = s.isPinned,
+							cfState = 0,
+						),
+					)
+				}
+				stamp(SyncTriggers.SOURCES, s.source, s.v)
+			}
 		}
 
 		// Reading progress from another device has the same effects as reading here.

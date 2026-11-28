@@ -53,8 +53,8 @@ android {
 		applicationId 'kuroha.xrnix.app'
 		minSdk = 26
 		targetSdk = 37
-		versionCode = 2050
-		versionName = '2.0.0'
+		versionCode = 2100
+		versionName = '2.1.0'
 		generatedDensities = []
 		ndk {
 			// ARM only. x86 and x86_64 devices - Intel Chromebooks, emulators, BlueStacks - run these

@@ -1,5 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+	<!-- Kuroha -->
+	<style name="ThemeOverlay.Kotatsu.Kuroha">
+		<item name="colorPrimary">@color/kuroha_primary</item>
+		<item name="colorOnPrimary">@color/kuroha_onPrimary</item>
+		<item name="colorPrimaryContainer">@color/kuroha_primaryContainer</item>
+		<item name="colorOnPrimaryContainer">@color/kuroha_onPrimaryContainer</item>
+		<item name="colorSecondary">@color/kuroha_secondary</item>
+		<item name="colorOnSecondary">@color/kuroha_onSecondary</item>
+		<item name="colorSecondaryContainer">@color/kuroha_secondaryContainer</item>
+		<item name="colorOnSecondaryContainer">@color/kuroha_onSecondaryContainer</item>
+		<item name="colorTertiary">@color/kuroha_tertiary</item>
+		<item name="colorOnTertiary">@color/kuroha_onTertiary</item>
+		<item name="colorTertiaryContainer">@color/kuroha_tertiaryContainer</item>
+		<item name="colorOnTertiaryContainer">@color/kuroha_onTertiaryContainer</item>
+		<item name="colorError">@color/kuroha_error</item>
+		<item name="colorOnError">@color/kuroha_onError</item>
+		<item name="colorErrorContainer">@color/kuroha_errorContainer</item>
+		<item name="colorOnErrorContainer">@color/kuroha_onErrorContainer</item>
+		<item name="android:colorBackground">@color/kuroha_background</item>
+		<item name="colorOnBackground">@color/kuroha_onBackground</item>
+		<item name="colorSurface">@color/kuroha_surface</item>
+		<item name="colorOnSurface">@color/kuroha_onSurface</item>
+		<item name="colorSurfaceVariant">@color/kuroha_surfaceVariant</item>
+		<item name="colorOnSurfaceVariant">@color/kuroha_onSurfaceVariant</item>
+		<item name="colorOutline">@color/kuroha_outline</item>
+		<item name="colorOutlineVariant">@color/kuroha_outlineVariant</item>
+		<item name="colorSurfaceInverse">@color/kuroha_inverseSurface</item>
+		<item name="colorOnSurfaceInverse">@color/kuroha_inverseOnSurface</item>
+		<item name="colorPrimaryInverse">@color/kuroha_inversePrimary</item>
+		<item name="colorPrimaryFixed">@color/kuroha_primaryFixed</item>
+		<item name="colorOnPrimaryFixed">@color/kuroha_onPrimaryFixed</item>
+		<item name="colorPrimaryFixedDim">@color/kuroha_primaryFixedDim</item>
+		<item name="colorOnPrimaryFixedVariant">@color/kuroha_onPrimaryFixedVariant</item>
+		<item name="colorSecondaryFixed">@color/kuroha_secondaryFixed</item>
+		<item name="colorOnSecondaryFixed">@color/kuroha_onSecondaryFixed</item>
+		<item name="colorSecondaryFixedDim">@color/kuroha_secondaryFixedDim</item>
+		<item name="colorOnSecondaryFixedVariant">@color/kuroha_onSecondaryFixedVariant</item>
+		<item name="colorTertiaryFixed">@color/kuroha_tertiaryFixed</item>
+		<item name="colorOnTertiaryFixed">@color/kuroha_onTertiaryFixed</item>
+		<item name="colorTertiaryFixedDim">@color/kuroha_tertiaryFixedDim</item>
+		<item name="colorOnTertiaryFixedVariant">@color/kuroha_onTertiaryFixedVariant</item>
+		<item name="colorSurfaceDim">@color/kuroha_surfaceDim</item>
+		<item name="colorSurfaceBright">@color/kuroha_surfaceBright</item>
+		<item name="colorSurfaceContainerLowest">@color/kuroha_surfaceContainerLowest</item>
+		<item name="colorSurfaceContainerLow">@color/kuroha_surfaceContainerLow</item>
+		<item name="colorSurfaceContainer">@color/kuroha_surfaceContainer</item>
+		<item name="colorSurfaceContainerHigh">@color/kuroha_surfaceContainerHigh</item>
+		<item name="colorSurfaceContainerHighest">@color/kuroha_surfaceContainerHighest</item>
+	</style>
 	<!-- Totoro -->
 	<style name="ThemeOverlay.Kotatsu.Totoro">
 		<item name="colorPrimary">@color/totoro_primary</item>

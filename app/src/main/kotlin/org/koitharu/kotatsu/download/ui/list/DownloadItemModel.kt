@@ -32,7 +32,14 @@ data class DownloadItemModel(
 	val chaptersDownloaded: Int,
 	val isExpanded: Boolean,
 	val chapters: StateFlow<List<DownloadChapter>?>,
+	val priority: Int = 0,
 ) : ListModel, Comparable<DownloadItemModel> {
+
+	val isHighPriority: Boolean
+		get() = priority > 0
+
+	val canPrioritize: Boolean
+		get() = workState == WorkInfo.State.ENQUEUED || workState == WorkInfo.State.BLOCKED || canResume
 
 	val percent: Float
 		get() = if (max > 0) progress / max.toFloat() else 0f

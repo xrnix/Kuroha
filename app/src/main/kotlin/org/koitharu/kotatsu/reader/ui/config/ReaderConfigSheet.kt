@@ -193,6 +193,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 		val callback = remember { findParentCallback(Callback::class.java) }
 
 		var doubleOnLandscape by remember { mutableStateOf(settings.isReaderDoubleOnLandscape) }
+		var doubleLandscapeOnly by remember { mutableStateOf(settings.isReaderDoubleLandscapeOnly) }
 		var doubleOnFoldable by remember { mutableStateOf(settings.isReaderDoubleOnFoldable) }
 		var doubleCoverPage by remember { mutableStateOf(settings.isReaderDoubleCoverPage) }
 		var doubleSensitivity by remember { mutableFloatStateOf(settings.readerDoublePagesSensitivity * 100f) }
@@ -310,7 +311,7 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 				SettingsGroup {
 					item { pos ->
 						SwitchSettingsItem(
-							title = stringResource(R.string.use_two_pages_landscape),
+							title = stringResource(R.string.two_page_layout),
 							checked = doubleOnLandscape,
 							onCheckedChange = { checked ->
 								doubleOnLandscape = checked
@@ -321,6 +322,18 @@ class ReaderConfigSheet : BaseAdaptiveSheet<SheetReaderConfigBinding>() {
 						)
 					}
 					if (doubleOnLandscape) {
+						item { pos ->
+							SwitchSettingsItem(
+								title = stringResource(R.string.landscape_only),
+								checked = doubleLandscapeOnly,
+								onCheckedChange = { checked ->
+									doubleLandscapeOnly = checked
+									settings.isReaderDoubleLandscapeOnly = checked
+									callback?.onDoubleModeChanged(doubleOnLandscape)
+								},
+								shape = pos.shape,
+							)
+						}
 						item { pos ->
 							SwitchSettingsItem(
 								title = stringResource(R.string.auto_double_foldable),

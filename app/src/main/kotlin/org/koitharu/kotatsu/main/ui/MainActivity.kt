@@ -155,6 +155,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	override fun onCreate(savedInstanceState: Bundle?) {
 		val splash = installSplashScreen()
 		super.onCreate(savedInstanceState)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			splashScreen.setSplashScreenTheme(settings.colorScheme.randomSplashStyleResId(settings.appIconStyle))
+		}
 
 		setContentView(ActivityMainBinding.inflate(layoutInflater))
 
@@ -214,11 +217,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.buttonSources.setOnClickListener {
 			startActivity(android.content.Intent(this, SourcesActivity::class.java))
 		}
-		viewBinding.buttonUpdate.setOnClickListener { router.openAppUpdate() }
-		viewBinding.buttonUpdateDismiss.setOnClickListener {
-			viewModel.appUpdate.value?.let { settings.dismissedUpdateVersion = it.name }
-			viewBinding.layoutUpdatePrompt.isVisible = false
-		}
 		viewBinding.buttonIncognitoDisable.setOnClickListener { viewModel.setIncognitoMode(false) }
 
 		fadingAppbarMediator = FadingAppbarMediator(viewBinding.appbar, viewBinding.layoutSearch)
@@ -264,10 +262,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewModel.isResumeEnabled.observe(this, this::onResumeEnabledChanged)
 		settings.observe(AppSettings.KEY_NAV_LEGACY).observe(this) { adjustFabVisibility() }
 		viewModel.feedCounter.observe(this, ::onFeedCounterChanged)
-		viewModel.appUpdate.observe(this) { update ->
-			viewBinding.layoutUpdatePrompt.isVisible =
-				update != null && update.name != settings.dismissedUpdateVersion
-		}
 		viewModel.onFirstStart.observeEvent(this) { router.openOnboarding() }
 		viewModel.isBottomNavPinned.observe(this, ::setNavbarPinned)
 		searchSuggestionViewModel.isIncognitoModeEnabled.observe(this, this::onIncognitoModeChanged)

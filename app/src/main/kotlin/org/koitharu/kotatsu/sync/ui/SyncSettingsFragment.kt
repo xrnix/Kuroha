@@ -109,13 +109,6 @@ class SyncSettingsFragment : BaseComposeSettingsFragment(R.string.google_drive_s
 					onContentChange = viewModel::setEnabledContent,
 					onToggleEmailHidden = viewModel::setEmailHidden,
 					onDeleteData = viewModel::deleteAllData,
-					onOpenPeriodicBackups = {
-						(activity as? SettingsActivity)?.openFragment(
-							PeriodicalBackupSettingsFragment::class.java,
-							null,
-							isFromRoot = false,
-						)
-					},
 				)
 			}
 		}
@@ -166,7 +159,6 @@ private fun SyncScreen(
 	onContentChange: (Set<String>) -> Unit,
 	onToggleEmailHidden: (Boolean) -> Unit,
 	onDeleteData: () -> Unit,
-	onOpenPeriodicBackups: () -> Unit,
 ) {
 	val colors = CategoryPalette.forKey("sync")
 	var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -319,20 +311,6 @@ private fun SyncScreen(
 							onClick = { showDeleteConfirm = true },
 						)
 					}
-				}
-			}
-		}
-		item { Spacer(Modifier.height(8.dp).fillMaxWidth()) }
-		item {
-			SettingsGroup(title = stringResource(R.string.backup_restore)) {
-				item { pos ->
-					NavigationSettingsItem(
-						title = stringResource(R.string.periodic_backups),
-						subtitle = stringResource(R.string.periodic_backups_summary),
-						icon = R.drawable.ic_backup_restore,
-						shape = pos.shape,
-						onClick = onOpenPeriodicBackups,
-					)
 				}
 			}
 		}

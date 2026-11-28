@@ -307,6 +307,7 @@ private fun ServicesScreen(
 					ScrobblerService.KITSU to R.drawable.ic_kitsu,
 					ScrobblerService.MAL to R.drawable.ic_mal,
 					ScrobblerService.SHIKIMORI to R.drawable.ic_shikimori,
+					ScrobblerService.MANGABAKA to R.drawable.ic_mangabaka,
 				)
 				SettingsGroup {
 					services.forEach { (svc, icon) ->

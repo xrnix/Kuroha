@@ -387,11 +387,11 @@ private fun DiscoverFilterBar(
 				DiscoverTab.entries.forEach { tab ->
 					val selected = tab == state.tab
 					val bg by animateColorAsState(
-						targetValue = if (selected) cs.primaryContainer else cs.surfaceContainerHigh,
+						targetValue = if (selected) cs.primary else cs.surfaceContainerHigh,
 						label = "tabSegBg",
 					)
 					val fg by animateColorAsState(
-						targetValue = if (selected) cs.onPrimaryContainer else cs.onSurfaceVariant,
+						targetValue = if (selected) cs.onPrimary else cs.onSurfaceVariant,
 						label = "tabSegFg",
 					)
 					Box(
@@ -426,8 +426,8 @@ private fun DiscoverFilterBar(
 		) {
 			Surface(
 				shape = CircleShape,
-				color = if (hasActiveFilters) cs.primaryContainer else cs.surfaceContainerHigh,
-				contentColor = if (hasActiveFilters) cs.onPrimaryContainer else cs.onSurface,
+				color = if (hasActiveFilters) cs.primary else cs.surfaceContainerHigh,
+				contentColor = if (hasActiveFilters) cs.onPrimary else cs.onSurface,
 				modifier = Modifier
 					.clip(CircleShape)
 					.clickable {

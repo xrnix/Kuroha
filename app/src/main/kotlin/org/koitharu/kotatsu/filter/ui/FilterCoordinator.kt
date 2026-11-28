@@ -4,6 +4,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.ViewModelLifecycle
 import dagger.hilt.android.scopes.ViewModelScoped
+import eu.kanade.tachiyomi.source.model.Filter
+import eu.kanade.tachiyomi.source.model.FilterList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,8 @@ import org.koitharu.kotatsu.filter.data.PersistableFilter
 import org.koitharu.kotatsu.filter.data.SavedFiltersRepository
 import org.koitharu.kotatsu.filter.ui.model.FilterProperty
 import org.koitharu.kotatsu.filter.ui.tags.TagTitleComparator
+import org.koitharu.kotatsu.mihon.MihonFilterHost
+import org.koitharu.kotatsu.mihon.MihonFilterMapper
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Demographic
@@ -277,8 +281,98 @@ class FilterCoordinator @Inject constructor(
         )
     }.stateIn(coroutineScope, SharingStarted.Lazily, FilterProperty.EMPTY)
 
+    private val filterHost: MihonFilterHost?
+        get() = repository as? MihonFilterHost
+
+    val isDynamicFilter: Boolean
+        get() = filterHost?.supportsDynamicFilters == true
+
     fun reset() {
         currentListFilter.value = MangaListFilter.EMPTY
+    }
+
+    fun clearSavedFilter() {
+        currentListFilter.value = MangaListFilter.EMPTY
+    }
+
+    fun resetSourceSort() {
+        currentListFilter.update { filter ->
+            filter.copy(
+                tags = filter.tags.filterNot { it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX) }.toSet(),
+            )
+        }
+    }
+
+    suspend fun loadWorkingFilters(): WorkingFilters {
+        val host = filterHost ?: return WorkingFilters(FilterList(), FilterList())
+        val defaults = host.loadDefaultFilterList()
+        val working = host.loadDefaultFilterList()
+        MihonFilterMapper.decode(working, currentListFilter.value)
+        return WorkingFilters(working = working, defaults = defaults)
+    }
+
+    fun applyDynamicFilters(working: FilterList, defaults: FilterList) {
+        val tags = MihonFilterMapper.encode(working, defaults, repository.source)
+        val query = currentListFilter.value.takeQueryIfSupported()
+        currentListFilter.value = MangaListFilter(query = query, tags = tags)
+    }
+
+    suspend fun loadSortState(): SortState {
+        val host = filterHost
+        if (host?.supportsDynamicFilters == true) {
+            val working = host.loadDefaultFilterList()
+            MihonFilterMapper.decode(working, currentListFilter.value)
+            val hasSourceSort = currentListFilter.value.tags.any {
+                it.key.startsWith(MihonFilterMapper.SORT_KEY_PREFIX)
+            }
+            val sourceSort = when (val ref = MihonFilterMapper.findSortFilter(working)) {
+                is MihonFilterMapper.SortRef.OfSort -> SortState.Source(
+                    options = ref.filter.values.toList(),
+                    selectedIndex = if (hasSourceSort) ref.filter.state?.index ?: -1 else -1,
+                    isAscending = hasSourceSort && ref.filter.state?.ascending == true,
+                    supportsDirection = true,
+                )
+                is MihonFilterMapper.SortRef.OfSelect -> SortState.Source(
+                    options = ref.filter.values.map { it.toString() },
+                    selectedIndex = if (hasSourceSort) ref.filter.state else -1,
+                    isAscending = false,
+                    supportsDirection = false,
+                )
+                null -> null
+            }
+            return SortState(
+                inAppOptions = IN_APP_SORT_ORDERS.filter { it in availableSortOrders },
+                inAppSelected = currentSortOrder.value.takeUnless { hasSourceSort },
+                source = sourceSort,
+            )
+        }
+        return SortState(
+            inAppOptions = availableSortOrders.sortedByOrdinal(),
+            inAppSelected = currentSortOrder.value,
+            source = null,
+        )
+    }
+
+    fun applyInAppSort(order: SortOrder) {
+        if (filterHost?.inAppListingsExclusive == true) {
+            currentListFilter.value = MangaListFilter.EMPTY
+        }
+        setSortOrder(order)
+    }
+
+    fun applySourceSort(index: Int, isAscending: Boolean) = coroutineScope.launch {
+        val host = filterHost ?: return@launch
+        val defaults = host.loadDefaultFilterList()
+        val working = host.loadDefaultFilterList()
+        MihonFilterMapper.decode(working, currentListFilter.value)
+        when (val ref = MihonFilterMapper.findSortFilter(working)) {
+            is MihonFilterMapper.SortRef.OfSort -> ref.filter.state = Filter.Sort.Selection(index, isAscending)
+            is MihonFilterMapper.SortRef.OfSelect -> if (index in ref.filter.values.indices) {
+                ref.filter.state = index
+            }
+            null -> return@launch
+        }
+        applyDynamicFilters(working, defaults)
     }
 
     fun snapshot() = Snapshot(
@@ -515,6 +609,24 @@ class FilterCoordinator @Inject constructor(
         return result
     }
 
+    class WorkingFilters(
+        val working: FilterList,
+        val defaults: FilterList,
+    )
+
+    data class SortState(
+        val inAppOptions: List<SortOrder>,
+        val inAppSelected: SortOrder?,
+        val source: Source?,
+    ) {
+        data class Source(
+            val options: List<String>,
+            val selectedIndex: Int,
+            val isAscending: Boolean,
+            val supportsDirection: Boolean,
+        )
+    }
+
     data class Snapshot(
         val sortOrder: SortOrder,
         val listFilter: MangaListFilter,
@@ -528,6 +640,7 @@ class FilterCoordinator @Inject constructor(
     companion object {
 
         private const val TAGS_LIMIT = 12
+        private val IN_APP_SORT_ORDERS = listOf(SortOrder.POPULARITY, SortOrder.UPDATED)
         private val MAX_YEAR = Calendar.getInstance()[Calendar.YEAR] + 1
 
         fun find(fragment: Fragment): FilterCoordinator? {

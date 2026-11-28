@@ -15,6 +15,12 @@
 	<!-- Expressive follows the wallpaper, which is what the defaults do on Android 12+ -->
 	<style name="Theme.Kotatsu.Splash.Expressive" />
 
+	<style name="Theme.Kotatsu.Splash.Kuroha">
+		<item name="windowSplashScreenBackground">@color/kuroha_surfaceContainer</item>
+		<item name="splashShapeColor">@color/kuroha_primary</item>
+		<item name="splashLogoColor">@color/kuroha_onPrimary</item>
+	</style>
+
 	<style name="Theme.Kotatsu.Splash.Totoro">
 		<item name="windowSplashScreenBackground">@color/totoro_surfaceContainer</item>
 		<item name="splashShapeColor">@color/totoro_primary</item>
@@ -92,5 +98,141 @@
 		<item name="splashShapeColor">@color/sky_primary</item>
 		<item name="splashLogoColor">@color/sky_onPrimary</item>
 	</style>
+
+	<!-- Per-scheme M3E chip shape variants for randomized cold-start splash -->
+	<style name="Theme.Kotatsu.Splash.Expressive.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Kuroha.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Totoro.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Miku.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Asuka.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Mion.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Rikka.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Sakura.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Mamimi.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Kanade.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+	<style name="Theme.Kotatsu.Splash.Itsuka.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_diamond</item></style>
+
+
+	<!-- Per-scheme M3E chip shape variants for Chiseled base icon -->
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Expressive.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Kuroha.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Totoro.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Miku.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Asuka.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Mion.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Rikka.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Sakura.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Mamimi.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Kanade.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled" />
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled.Clover4"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_clover4</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled.Flower6"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_flower6</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled.SoftBurst"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_softburst</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled.Sunny"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_sunny</item></style>
+	<style name="Theme.Kotatsu.Splash.Itsuka.Chiseled.Diamond"><item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_chiseled_diamond</item></style>
 
 </resources>

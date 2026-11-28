@@ -17,6 +17,7 @@ import org.koitharu.kotatsu.sync.data.model.RHistory
 import org.koitharu.kotatsu.sync.data.model.RMangaPrefs
 import org.koitharu.kotatsu.sync.data.model.RPref
 import org.koitharu.kotatsu.sync.data.model.RScrobbling
+import org.koitharu.kotatsu.sync.data.model.RSource
 import org.koitharu.kotatsu.sync.data.model.RStats
 import org.koitharu.kotatsu.sync.data.model.RTombstone
 import org.koitharu.kotatsu.sync.data.model.Replica
@@ -239,6 +240,21 @@ class ReplicaBuilder @Inject constructor(
 			}
 		}
 
+		val sources = if (SyncContent.SETTINGS in content) {
+			val sv = versions(SyncTriggers.SOURCES)
+			syncDao.findAllSources().map { s ->
+				RSource(
+					source = s.source,
+					isEnabled = s.isEnabled,
+					sortKey = s.sortKey,
+					isPinned = s.isPinned,
+					v = sv[s.source]?.version ?: 0L,
+				)
+			}.sortedByKey()
+		} else {
+			emptyList()
+		}
+
 		// Manga imported from files point at this device's storage and can't open anywhere else.
 		val localOnly = syncDao.findMangaIds(LocalMangaSource.name).toHashSet()
 		mangaIds.removeAll(localOnly)
@@ -256,6 +272,7 @@ class ReplicaBuilder @Inject constructor(
 			feed = feed.filterNot { it.mangaId in localOnly }.sortedByKey(),
 			mangaPrefs = mangaPrefs.filterNot { it.mangaId in localOnly }.sortedByKey(),
 			prefs = if (SyncContent.SETTINGS in content) prefs.sortedByKey() else emptyList(),
+			sources = sources,
 			tombstones = tombstones.sortedWith(compareBy({ it.table }, { it.recordKey })),
 		)
 		return Local(replica, covers.distinctBy { it.hash })

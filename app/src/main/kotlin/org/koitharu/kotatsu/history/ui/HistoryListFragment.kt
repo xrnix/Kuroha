@@ -32,6 +32,11 @@ class HistoryListFragment : MangaListFragment() {
 		viewModel.isStatsEnabled.observe(viewLifecycleOwner, MenuInvalidator(requireActivity()))
 	}
 
+	override fun onResume() {
+		super.onResume()
+		viewModel.refreshHomeStats()
+	}
+
 	override fun onScrolledToEnd() = viewModel.requestMoreItems()
 
 	override fun onEmptyActionClick() = viewModel.clearFilter()
@@ -73,7 +78,8 @@ class HistoryListFragment : MangaListFragment() {
 	}
 
 	override fun onCreateAdapter() = HistoryListAdapter(
-		this,
-		DynamicItemSizeResolver(resources, viewLifecycleOwner, settings, adjustWidth = false),
+		listener = this,
+		sizeResolver = DynamicItemSizeResolver(resources, viewLifecycleOwner, settings, adjustWidth = false),
+		onStatsClick = { router.openStatistic() },
 	)
 }

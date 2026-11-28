@@ -6,6 +6,7 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
 import org.koitharu.kotatsu.core.db.entity.MangaPrefsEntity
+import org.koitharu.kotatsu.core.db.entity.MangaSourceEntity
 import org.koitharu.kotatsu.core.db.entity.MangaWithTags
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
 import org.koitharu.kotatsu.stats.data.StatsEntity
@@ -73,6 +74,15 @@ abstract class SyncDao {
 
 	@Query("SELECT * FROM preferences")
 	abstract suspend fun findAllMangaPrefs(): List<MangaPrefsEntity>
+
+	@Query("SELECT * FROM sources")
+	abstract suspend fun findAllSources(): List<MangaSourceEntity>
+
+	@Query("UPDATE sources SET enabled = :enabled, sort_key = :sortKey, pinned = :pinned WHERE source = :source")
+	abstract suspend fun updateSourceState(source: String, enabled: Boolean, sortKey: Int, pinned: Boolean): Int
+
+	@Upsert
+	abstract suspend fun upsertSource(entity: MangaSourceEntity)
 
 	@Transaction
 	@Query("SELECT * FROM manga WHERE manga_id IN (:ids)")

@@ -70,6 +70,7 @@ import org.koitharu.kotatsu.favourites.ui.categories.FavouriteCategoriesActivity
 import org.koitharu.kotatsu.favourites.ui.categories.edit.FavouritesCategoryEditActivity
 import org.koitharu.kotatsu.favourites.ui.categories.select.FavoriteDialog
 import org.koitharu.kotatsu.filter.ui.FilterCoordinator
+import org.koitharu.kotatsu.filter.ui.mihon.MihonFilterSheetFragment
 import org.koitharu.kotatsu.filter.ui.sheet.FilterSheetFragment
 import org.koitharu.kotatsu.filter.ui.tags.TagsCatalogSheet
 import org.koitharu.kotatsu.history.ui.HistoryActivity
@@ -262,6 +263,8 @@ class AppRouter private constructor(
     }
 
     fun openFavoriteCategories() = startActivity(FavouriteCategoriesActivity::class.java)
+
+    fun openReleaseCalendar() = startActivity(org.koitharu.kotatsu.tracker.ui.calendar.ReleaseCalendarActivity::class.java)
 
     fun openFavoriteCategoryEdit(categoryId: Long) {
         startActivity(
@@ -520,10 +523,21 @@ class AppRouter private constructor(
         ImportDialogFragment().showDistinct()
     }
 
-    fun showFilterSheet(): Boolean = if (isFilterSupported()) {
-        FilterSheetFragment().showDistinct()
-    } else {
-        false
+    private fun currentFilterCoordinator(): FilterCoordinator? = when {
+        fragment != null -> FilterCoordinator.find(fragment)
+        activity != null -> (activity as? FilterCoordinator.Owner)?.filterCoordinator
+        else -> null
+    }
+
+    fun showFilterSheet(): Boolean {
+        val coordinator = currentFilterCoordinator() ?: return false
+        return if (coordinator.isDynamicFilter) {
+            MihonFilterSheetFragment().showDistinct()
+        } else if (isFilterSupported()) {
+            FilterSheetFragment().showDistinct()
+        } else {
+            false
+        }
     }
 
     fun showTagsCatalogSheet(excludeMode: Boolean) {

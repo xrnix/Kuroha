@@ -239,8 +239,8 @@ class FloatingBottomNavigationView @JvmOverloads constructor(
 		// the strongest on-theme option and carries its own guaranteed-contrast content colour.
 		return FloatingNavBarColors(
 			container = backgroundTintList?.defaultColor ?: fallbackContainer,
-			selectedContainer = context.getThemeColor(materialR.attr.colorPrimaryContainer),
-			selectedContent = context.getThemeColor(materialR.attr.colorOnPrimaryContainer),
+			selectedContainer = context.getThemeColor(androidx.appcompat.R.attr.colorPrimary),
+			selectedContent = context.getThemeColor(materialR.attr.colorOnPrimary),
 			unselectedContent = itemIconTintList?.getColorForState(unselectedState, fallbackUnselectedContent)
 				?: itemTextColor?.getColorForState(unselectedState, fallbackUnselectedContent)
 				?: fallbackUnselectedContent,

@@ -150,8 +150,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		set(value) = prefs.edit { putBoolean(KEY_TITLE_TAP_TO_READ, value) }
 
 	var appIcon: AppIcon
-		get() = prefs.getEnumValue(KEY_APP_ICON, AppIcon.DEFAULT)
+		get() = prefs.getEnumValue(KEY_APP_ICON, AppIcon.THEMED)
 		set(value) = prefs.edit { putEnumValue(KEY_APP_ICON, value) }
+
+	var appIconStyle: org.koitharu.kotatsu.core.os.AppIconStyle
+		get() = prefs.getEnumValue(KEY_APP_ICON_STYLE, org.koitharu.kotatsu.core.os.AppIconStyle.CALLIGRAPHIC)
+		set(value) = prefs.edit { putEnumValue(KEY_APP_ICON_STYLE, value) }
 
 	var isAppProtectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_PROTECT_APP, false) || !appPassword.isNullOrEmpty()
@@ -238,6 +242,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	var isReaderDoubleOnLandscape: Boolean
 		get() = prefs.getBoolean(KEY_READER_DOUBLE_PAGES, false)
 		set(value) = prefs.edit { putBoolean(KEY_READER_DOUBLE_PAGES, value) }
+
+	var isReaderDoubleLandscapeOnly: Boolean
+		get() = prefs.getBoolean(KEY_READER_DOUBLE_LANDSCAPE_ONLY, false)
+		set(value) = prefs.edit { putBoolean(KEY_READER_DOUBLE_LANDSCAPE_ONLY, value) }
 
 	var isReaderDoubleOnFoldable: Boolean
 		get() = prefs.getBoolean(KEY_READER_DOUBLE_FOLDABLE, false)
@@ -341,6 +349,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	val isTrackerNsfwDisabled: Boolean
 		get() = prefs.getBoolean(KEY_TRACKER_NO_NSFW, false)
+
+	val trackerSmartUpdateRules: Set<String>
+		get() = prefs.getStringSet(KEY_TRACKER_SMART_UPDATE, null).orEmpty()
 
 	val trackerDownloadStrategy: TrackerDownloadStrategy
 		get() = prefs.getEnumValue(KEY_TRACKER_DOWNLOAD, TrackerDownloadStrategy.DISABLED)
@@ -1145,12 +1156,16 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_THEME_AMOLED = "amoled_theme"
 		const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
 		const val KEY_APP_ICON = "app_icon"
+		const val KEY_APP_ICON_STYLE = "app_icon_style"
 		const val KEY_PROTECT_APP_TIMEOUT = "protect_app_timeout"
 		const val KEY_HIDE_STATUS_BAR = "hide_status_bar"
 		const val KEY_SOURCES_GRID_COLUMNS = "sources_grid_columns"
 		const val KEY_FEED_SWIPE_GESTURES = "feed_swipe_gestures"
 		const val KEY_TRACKER_FAILURE_NOTIFICATION = "tracker_notify_fail"
 		const val KEY_TRACKER_SMART_UPDATE = "tracker_smart_update"
+		const val SMART_UPDATE_SKIP_COMPLETED = "completed"
+		const val SMART_UPDATE_SKIP_UNSTARTED = "unstarted"
+		const val SMART_UPDATE_SKIP_UNREAD = "unread"
 		const val KEY_ADBLOCK = "adblock"
 		const val KEY_READER_DOUBLE_TAP_FILL = "reader_double_tap_fill"
 		const val KEY_READER_UPSCALE = "reader_upscale"
@@ -1179,6 +1194,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_REMOTE_SOURCES = "remote_sources"
 		const val KEY_LOCAL_STORAGE = "local_storage"
 		const val KEY_READER_DOUBLE_PAGES = "reader_double_pages"
+		const val KEY_READER_DOUBLE_LANDSCAPE_ONLY = "reader_double_landscape_only"
 		const val KEY_READER_DOUBLE_PAGES_SENSITIVITY = "reader_double_pages_sensitivity_2"
 		const val KEY_READER_DOUBLE_FOLDABLE = "reader_double_foldable"
 		const val KEY_READER_DOUBLE_COVER_PAGE = "reader_double_cover_page"

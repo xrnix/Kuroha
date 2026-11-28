@@ -33,6 +33,7 @@ import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.isEmpty
 import org.koitharu.kotatsu.download.domain.DownloadState
 import org.koitharu.kotatsu.download.ui.list.chapters.DownloadChapter
+import org.koitharu.kotatsu.download.ui.worker.DownloadTask
 import org.koitharu.kotatsu.download.ui.worker.DownloadWorker
 import org.koitharu.kotatsu.list.ui.model.EmptyState
 import org.koitharu.kotatsu.list.ui.model.ListHeader
@@ -48,6 +49,28 @@ import java.util.LinkedList
 import java.util.UUID
 import javax.inject.Inject
 
+enum class DownloadFilter {
+	ALL,
+	ACTIVE,
+	PAUSED,
+	FAILED,
+	COMPLETED,
+}
+
+data class DownloadsSummary(
+	val activeCount: Int = 0,
+	val queuedCount: Int = 0,
+	val pausedCount: Int = 0,
+	val failedCount: Int = 0,
+	val completedCount: Int = 0,
+	val overallProgress: Float = 0f,
+	val hasIndeterminate: Boolean = false,
+	val eta: Long = -1L,
+) {
+	val hasOngoing: Boolean
+		get() = activeCount > 0 || queuedCount > 0 || pausedCount > 0 || failedCount > 0
+}
+
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
 	private val workScheduler: DownloadWorker.Scheduler,
@@ -61,6 +84,7 @@ class DownloadsViewModel @Inject constructor(
 	private val cacheMutex = Mutex()
 	private val expanded = MutableStateFlow(emptySet<UUID>())
 	private val chaptersCache = ArrayMap<UUID, StateFlow<List<DownloadChapter>?>>()
+	val selectedFilter = MutableStateFlow(DownloadFilter.ALL)
 
 	private val works = combine(
 		workScheduler.observeWorks(),
@@ -91,6 +115,102 @@ class DownloadsViewModel @Inject constructor(
 	val hasCancellableWorks = works.map {
 		it?.any { x -> !x.workState.isFinished } == true
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), false)
+
+	val allDownloads: StateFlow<List<DownloadItemModel>?> = works
+
+	val filterCounts: StateFlow<Map<DownloadFilter, Int>> = works.map { list ->
+		if (list == null) {
+			emptyMap()
+		} else {
+			mapOf(
+				DownloadFilter.ALL to list.size,
+				DownloadFilter.ACTIVE to list.count { it.canPause || it.workState == WorkInfo.State.ENQUEUED || it.workState == WorkInfo.State.BLOCKED },
+				DownloadFilter.PAUSED to list.count { it.canResume },
+				DownloadFilter.FAILED to list.count { it.canRetry },
+				DownloadFilter.COMPLETED to list.count { it.workState == WorkInfo.State.SUCCEEDED || it.workState == WorkInfo.State.CANCELLED },
+			)
+		}
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+	val summary: StateFlow<DownloadsSummary> = works.map { list ->
+		if (list.isNullOrEmpty()) {
+			DownloadsSummary()
+		} else {
+			var active = 0
+			var queued = 0
+			var paused = 0
+			var failed = 0
+			var completed = 0
+			var totalMax = 0L
+			var totalProgress = 0L
+			var anyIndeterminate = false
+			var maxEta = -1L
+			for (item in list) {
+				when {
+					item.canPause -> {
+						active++
+						if (item.isIndeterminate || item.max <= 0) {
+							anyIndeterminate = true
+						} else {
+							totalMax += item.max
+							totalProgress += item.progress.coerceIn(0, item.max)
+						}
+						if (item.eta > maxEta) maxEta = item.eta
+					}
+					item.workState == WorkInfo.State.ENQUEUED || item.workState == WorkInfo.State.BLOCKED -> queued++
+					item.canResume -> paused++
+					item.canRetry -> failed++
+					else -> completed++
+				}
+			}
+			val overall = if (totalMax > 0L) (totalProgress.toFloat() / totalMax.toFloat()).coerceIn(0f, 1f) else 0f
+			DownloadsSummary(
+				activeCount = active,
+				queuedCount = queued,
+				pausedCount = paused,
+				failedCount = failed,
+				completedCount = completed,
+				overallProgress = overall,
+				hasIndeterminate = anyIndeterminate && totalMax == 0L,
+				eta = maxEta,
+			)
+		}
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), DownloadsSummary())
+
+	val filteredUiItems: StateFlow<List<ListModel>?> = combine(works, selectedFilter) { list, filter ->
+		list?.filter { item ->
+			when (filter) {
+				DownloadFilter.ALL -> true
+				DownloadFilter.ACTIVE -> item.canPause || item.workState == WorkInfo.State.ENQUEUED || item.workState == WorkInfo.State.BLOCKED
+				DownloadFilter.PAUSED -> item.canResume
+				DownloadFilter.FAILED -> item.canRetry
+				DownloadFilter.COMPLETED -> item.workState == WorkInfo.State.SUCCEEDED || item.workState == WorkInfo.State.CANCELLED
+			}
+		}?.toUiList()
+	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.WhileSubscribed(5000), null)
+
+	fun setFilter(filter: DownloadFilter) {
+		selectedFilter.value = filter
+	}
+
+	fun togglePriority(item: DownloadItemModel) {
+		launchJob(Dispatchers.Default) {
+			val newPriority = if (item.isHighPriority) DownloadTask.PRIORITY_NORMAL else DownloadTask.PRIORITY_HIGH
+			workScheduler.setPriority(item.id, newPriority)
+		}
+	}
+
+	fun setPriority(ids: Set<Long>, isHigh: Boolean) {
+		launchJob(Dispatchers.Default) {
+			val snapshot = works.value ?: return@launchJob
+			val targetPriority = if (isHigh) DownloadTask.PRIORITY_HIGH else DownloadTask.PRIORITY_NORMAL
+			for (work in snapshot) {
+				if (work.id.mostSignificantBits in ids && work.canPrioritize) {
+					workScheduler.setPriority(work.id, targetPriority)
+				}
+			}
+		}
+	}
 
 	fun cancel(id: UUID) {
 		launchJob(Dispatchers.Default) {
@@ -262,6 +382,7 @@ class DownloadsViewModel @Inject constructor(
 		}
 		destination.addAll(0, running)
 		if (queued.isNotEmpty()) {
+			queued.sortByDescending { (it as DownloadItemModel).priority }
 			queued.addFirst(ListHeader(R.string.queued))
 		}
 		destination.addAll(0, queued)
@@ -296,6 +417,7 @@ class DownloadsViewModel @Inject constructor(
 			chaptersDownloaded = DownloadState.getDownloadedChapters(workData),
 			isExpanded = isExpanded,
 			chapters = chapters,
+			priority = DownloadState.getPriority(workData),
 		)
 	}
 

@@ -3,10 +3,17 @@ package org.koitharu.kotatsu.settings.override
 import android.content.Context
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import okio.buffer
 import okio.sink
@@ -19,18 +26,16 @@ import org.koitharu.kotatsu.core.util.MimeTypes
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.isFileUri
+import org.koitharu.kotatsu.core.util.ext.isNetworkUri
 import org.koitharu.kotatsu.core.util.ext.openSource
 import org.koitharu.kotatsu.core.util.ext.require
+import org.koitharu.kotatsu.core.util.ext.toFileOrNull
 import org.koitharu.kotatsu.core.util.ext.toMimeTypeOrNull
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.scrobbling.common.domain.Scrobbler
+import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import org.koitharu.kotatsu.parsers.util.md5
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.koitharu.kotatsu.core.network.MangaHttpClient
-import org.koitharu.kotatsu.core.util.ext.isHttpUrl
-import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
-import java.io.IOException
 import java.io.File
 import javax.inject.Inject
 
@@ -41,7 +46,7 @@ class OverrideConfigViewModel @Inject constructor(
 	savedStateHandle: SavedStateHandle,
 	@ApplicationContext private val context: Context,
 	private val dataRepository: MangaDataRepository,
-	@MangaHttpClient private val httpClient: OkHttpClient,
+	scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
 ) : BaseViewModel() {
 
 	private val manga = savedStateHandle.require<ParcelableManga>(AppRouter.KEY_MANGA).manga
@@ -49,21 +54,37 @@ class OverrideConfigViewModel @Inject constructor(
 	val data = MutableStateFlow<Pair<Manga, MangaOverride>?>(null)
 	val onSaved = MutableEventFlow<Unit>()
 
+	/**
+	 * Every tracker this manga is linked to, with the metadata it holds. Empty until the trackers
+	 * answer — each entry needs a network round trip — which is what greys out the import action.
+	 */
+	val trackers: StateFlow<List<ScrobblingInfo>> = combine(
+		scrobblers.map { it.observeScrobblingInfo(manga.id) },
+	) { info -> info.filterNotNull() }
+		// A tracker that cannot be reached just leaves the import action greyed out; it is not the
+		// editor's problem, and an error banner over the fields would be noise.
+		.catch { emit(emptyList()) }
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
+
 	init {
 		launchLoadingJob(Dispatchers.Default) {
-			data.value = manga to (dataRepository.getOverride(manga.id) ?: emptyOverride())
+			// Always use the pristine DB-stored manga so that the editor shows the true
+			// source title/cover, regardless of whether the caller already had an override applied.
+			val sourceManga = dataRepository.findMangaById(manga.id, false) ?: manga
+			data.value = sourceManga to (dataRepository.getOverride(manga.id) ?: emptyOverride())
 		}
 	}
 
-	fun save(title: String?) {
+	fun save(title: String?, @Suppress("UNUSED_PARAMETER") description: String?) {
 		launchLoadingJob(Dispatchers.Default) {
-			val override = checkNotNull(data.value).second.let {
-				it.copy(
-					title = title,
-					coverUrl = it.coverUrl?.cachedFile(),
-				)
-			}
-			dataRepository.setOverride(manga, override)
+			val (sourceManga, draftOverride) = checkNotNull(data.value)
+			val previousCover = dataRepository.getOverride(sourceManga.id)?.coverUrl
+			val override = draftOverride.copy(
+				title = title,
+				coverUrl = draftOverride.coverUrl?.cachedFile(),
+			)
+			dataRepository.setOverride(sourceManga, override)
+			deleteStaleCachedCover(previousCover, override.coverUrl)
 			onSaved.call(Unit)
 		}
 	}
@@ -77,16 +98,11 @@ class OverrideConfigViewModel @Inject constructor(
 
 	private suspend fun String.cachedFile(): String {
 		val uri = toUriOrNull()
-		if (uri == null || uri.isFileUri()) {
+		if (uri == null || uri.isFileUri() || uri.isNetworkUri()) {
+			// Remote (http/https) covers are kept as-is so Discord and lists can load them directly.
 			return this
 		}
 		val cacheDir = context.getExternalFilesDir(DIR_COVERS) ?: return this
-		// A cover chosen from another source is a remote url, which the ContentResolver cannot open.
-		// Download it instead, so the override keeps working even if that site later blocks hotlinking
-		// or moves the file.
-		if (this.isHttpUrl()) {
-			return downloadCover(cacheDir)
-		}
 		val cr = context.contentResolver
 		val ext = cr.getType(uri)?.toMimeTypeOrNull()?.let {
 			MimeTypes.getExtension(it)
@@ -109,35 +125,18 @@ class OverrideConfigViewModel @Inject constructor(
 		}.toUri().toString()
 	}
 
-	private suspend fun String.downloadCover(cacheDir: File): String = withContext(Dispatchers.IO) {
-		val request = Request.Builder().url(this@downloadCover).get().build()
-		// Already on Dispatchers.IO, so a blocking call is fine and keeps the imports honest.
-		httpClient.newCall(request).execute().use { response ->
-			if (!response.isSuccessful) {
-				throw IOException("Cannot download cover: HTTP ${response.code}")
-			}
-			val ext = response.body.contentType()?.toString()?.substringBefore(';')
-				?.toMimeTypeOrNull()
-				?.let { MimeTypes.getExtension(it) }
-				.ifNullOrEmpty {
-					// Some CDNs answer with a generic content type; the url usually still names the format.
-					this@downloadCover.substringBefore('?').substringAfterLast('.', "")
-						.takeIf { it.length in 1..4 }
+	private suspend fun deleteStaleCachedCover(oldCover: String?, newCover: String?) {
+		if (oldCover.isNullOrEmpty() || oldCover == newCover) {
+			return
+		}
+		withContext(Dispatchers.IO) {
+			runCatching {
+				val cacheDir = context.getExternalFilesDir(DIR_COVERS)?.canonicalFile ?: return@runCatching
+				val file = oldCover.toUriOrNull()?.toFileOrNull()?.canonicalFile ?: return@runCatching
+				if (file.parentFile?.canonicalPath == cacheDir.canonicalPath) {
+					file.delete()
 				}
-			val dest = File(
-				cacheDir,
-				buildString {
-					append(this@downloadCover.md5())
-					if (!ext.isNullOrEmpty()) {
-						append('.')
-						append(ext)
-					}
-				},
-			)
-			dest.sink().buffer().use { sink ->
-				sink.writeAll(response.body.source())
 			}
-			dest.toUri().toString()
 		}
 	}
 

@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+    <group
+        android:pivotX="500"
+        android:pivotY="500"
+        android:scaleX="0.90"
+        android:scaleY="0.90">
+        <path android:pathData="M333.3,314.0 L436.2,314.0 L436.2,482.1 L333.3,458.1 Z" android:fillColor="@color/launcher_mamimi_dark_fg" />
+        <path android:pathData="M551.4,314.0 L668.8,314.0 L545.2,474.1 L568.6,513.5 L445.3,484.7 L445.3,454.0 Z" android:fillColor="@color/launcher_mamimi_dark_fg" />
+        <path android:pathData="M329.0,466.4 L436.2,492.0 L436.2,686.0 L328.6,686.0 Z" android:fillColor="@color/launcher_mamimi_dark_fg" />
+        <path android:pathData="M445.3,494.2 L567.1,522.6 L671.4,686.0 L550.7,686.0 L469.0,550.0 L445.3,577.3 Z" android:fillColor="@color/launcher_mamimi_dark_fg" />
+        <path android:pathData="M449.3,659.0 L470.8,659.0 L473.1,660.9 L473.4,683.4 L471.6,685.6 L449.3,686.0 L446.8,684.2 L446.4,661.6 Z" android:fillColor="@color/launcher_mamimi_dark_fg" />
+    </group>
+</vector>

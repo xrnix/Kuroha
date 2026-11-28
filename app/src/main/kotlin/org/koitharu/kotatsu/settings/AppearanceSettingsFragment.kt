@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import org.koitharu.kotatsu.core.os.AppIcon
 import org.koitharu.kotatsu.core.os.AppIconManager
+import org.koitharu.kotatsu.core.os.AppIconStyle
 import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.rememberHapticEffect
 import org.koitharu.kotatsu.main.ui.nav.DrawablePainter
@@ -114,21 +115,47 @@ class AppearanceSettingsFragment : BaseComposeSettingsFragment(R.string.appearan
 					activity?.let { ThemeSwitchCoverActivity.switchNightMode(it, settings.theme) }
 				}, 300)
 			}
-			AppSettings.KEY_APP_ICON -> activity?.takeUnless {
-				// e.g. Default in dark mode -> Static: the same launcher entry, so nothing to close for
-				AppIconManager.isApplied(it, settings)
-			}?.let { activity ->
-				// Android closes a task opened from the icon being switched off anyway, so close it ourselves
-				// first instead of letting it fall apart screen by screen.
-				val context = activity.applicationContext
-				activity.finishAffinity()
-				activity.finishAndRemoveTask()
-				processLifecycleScope.launch(Dispatchers.Default) {
-					AppIconManager.apply(context, settings)
+			AppSettings.KEY_APP_ICON,
+			AppSettings.KEY_APP_ICON_STYLE -> {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					activity?.splashScreen?.setSplashScreenTheme(settings.colorScheme.randomSplashStyleResId(settings.appIconStyle))
+				}
+				activity?.takeUnless {
+					// e.g. Default in dark mode -> Static: the same launcher entry, so nothing to close for
+					AppIconManager.isApplied(it, settings)
+				}?.let { activity ->
+					// Android closes a task opened from the icon being switched off anyway, so close it ourselves
+					// first instead of letting it fall apart screen by screen.
+					val context = activity.applicationContext
+					activity.finishAffinity()
+					activity.finishAndRemoveTask()
+					processLifecycleScope.launch(Dispatchers.Default) {
+						AppIconManager.apply(context, settings)
+					}
 				}
 			}
 			AppSettings.KEY_COLOR_THEME,
-			AppSettings.KEY_THEME_AMOLED,
+			AppSettings.KEY_THEME_AMOLED -> {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					activity?.splashScreen?.setSplashScreenTheme(settings.colorScheme.randomSplashStyleResId(settings.appIconStyle))
+				}
+				val switchedIcon = if (settings.appIcon == AppIcon.THEMED) {
+					activity?.takeUnless { AppIconManager.isApplied(it, settings) }?.let { activity ->
+						val context = activity.applicationContext
+						activity.finishAffinity()
+						activity.finishAndRemoveTask()
+						processLifecycleScope.launch(Dispatchers.Default) {
+							AppIconManager.apply(context, settings)
+						}
+						true
+					} ?: false
+				} else {
+					false
+				}
+				if (!switchedIcon) {
+					activityRecreationHandle.recreateAll()
+				}
+			}
 			AppSettings.KEY_UI_SCALE -> {
 				activityRecreationHandle.recreateAll()
 			}
@@ -231,7 +258,8 @@ private fun AppearanceScreen(
 	var colorScheme by rememberStringPref(AppSettings.KEY_COLOR_THEME, ColorScheme.default.name)
 	var theme by rememberStringPref(AppSettings.KEY_THEME, "-1")
 	var amoled by rememberBooleanPref(AppSettings.KEY_THEME_AMOLED, false)
-	var appIcon by rememberStringPref(AppSettings.KEY_APP_ICON, AppIcon.DEFAULT.name)
+	var appIcon by rememberStringPref(AppSettings.KEY_APP_ICON, AppIcon.THEMED.name)
+	var appIconStyle by rememberStringPref(AppSettings.KEY_APP_ICON_STYLE, AppIconStyle.CALLIGRAPHIC.name)
 	var uiScale by rememberIntPref(AppSettings.KEY_UI_SCALE, 100)
 	var hapticFeedback by rememberBooleanPref(AppSettings.KEY_HAPTIC_FEEDBACK, true)
 	var hideStatusBar by rememberBooleanPref(AppSettings.KEY_HIDE_STATUS_BAR, false)
@@ -320,11 +348,14 @@ private fun AppearanceScreen(
 						icon = R.drawable.ic_app_icon,
 						shape = pos.shape,
 						below = {
+							val parsedStyle = AppIconStyle.entries.find { it.name == appIconStyle } ?: AppIconStyle.CALLIGRAPHIC
 							AppIconPicker(
 								selected = appIcon,
+								selectedStyle = parsedStyle,
 								scheme = ColorScheme.entries.find { it.name == colorScheme } ?: ColorScheme.default,
 								isDark = isSystemInDarkTheme(),
 								isOled = amoled,
+								onSelectStyle = { appIconStyle = it },
 								onSelect = { appIcon = it },
 							)
 						},
@@ -632,47 +663,96 @@ private fun AppearanceScreen(
 @Composable
 private fun AppIconPicker(
 	selected: String,
+	selectedStyle: AppIconStyle,
 	scheme: ColorScheme,
 	isDark: Boolean,
 	isOled: Boolean,
+	onSelectStyle: (String) -> Unit,
 	onSelect: (String) -> Unit,
 ) {
 	val haptic = rememberHapticEffect()
 	val context = LocalContext.current
+	val styleLabels = listOf(R.string.app_icon_style_calligraphic, R.string.app_icon_style_chiseled)
 	val labels = listOf(R.string.app_icon_default, R.string.app_icon_themed, R.string.app_icon_mono, R.string.app_icon_static)
-	Row(
+	Column(
 		modifier = Modifier.fillMaxWidth(),
-		horizontalArrangement = Arrangement.spacedBy(8.dp),
+		verticalArrangement = Arrangement.spacedBy(10.dp),
 	) {
-		AppIcon.entries.forEach { icon ->
-			if (icon == AppIcon.STATIC) {
-				// Static turns the theming off, so it sits apart from the themed choices.
-				VerticalDivider(modifier = Modifier.padding(top = 8.dp).height(48.dp))
+		Text(
+			text = stringResource(R.string.app_icon_base),
+			style = MaterialTheme.typography.labelMedium,
+			color = MaterialTheme.colorScheme.onSurfaceVariant,
+		)
+		Row(
+			modifier = Modifier.fillMaxWidth(),
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+		) {
+			AppIconStyle.entries.forEach { style ->
+				val res = AppIconManager.iconRes(AppIcon.DEFAULT, style, scheme, isDark, isOled)
+				val painter = remember(context, res) {
+					val adaptive = ContextCompat.getDrawable(context, res) as AdaptiveIconDrawable
+					DrawablePainter(LayerDrawable(arrayOf(adaptive.background, adaptive.foreground)))
+				}
+				PreviewTile(
+					label = stringResource(styleLabels[style.ordinal]),
+					selected = style == selectedStyle,
+					enabled = true,
+					onClick = {
+						haptic(HapticEffect.CONFIRM)
+						onSelectStyle(style.name)
+					},
+					aspectRatio = 1f,
+					modifier = Modifier
+						.weight(1f, fill = false)
+						.widthIn(max = 64.dp),
+				) {
+					Image(
+						painter = painter,
+						contentDescription = null,
+						modifier = Modifier.matchParentSize(),
+					)
+				}
 			}
-			val res = AppIconManager.iconRes(icon, scheme, isDark, isOled)
-			// Both layers edge to edge, so the tile's own rounded shape is the icon's shape.
-			val painter = remember(context, res) {
-				val adaptive = ContextCompat.getDrawable(context, res) as AdaptiveIconDrawable
-				DrawablePainter(LayerDrawable(arrayOf(adaptive.background, adaptive.foreground)))
-			}
-			PreviewTile(
-				label = stringResource(labels[icon.ordinal]),
-				selected = icon.name == selected,
-				enabled = true,
-				onClick = {
-					haptic(HapticEffect.CONFIRM)
-					onSelect(icon.name)
-				},
-				aspectRatio = 1f,
-				modifier = Modifier
-					.weight(1f, fill = false)
-					.widthIn(max = 64.dp),
-			) {
-				Image(
-					painter = painter,
-					contentDescription = null,
-					modifier = Modifier.matchParentSize(),
-				)
+		}
+		Text(
+			text = stringResource(R.string.app_icon_variant),
+			style = MaterialTheme.typography.labelMedium,
+			color = MaterialTheme.colorScheme.onSurfaceVariant,
+		)
+		Row(
+			modifier = Modifier.fillMaxWidth(),
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+		) {
+			AppIcon.entries.forEach { icon ->
+				if (icon == AppIcon.STATIC) {
+					// Static turns the theming off, so it sits apart from the themed choices.
+					VerticalDivider(modifier = Modifier.padding(top = 8.dp).height(48.dp))
+				}
+				val res = AppIconManager.iconRes(icon, selectedStyle, scheme, isDark, isOled)
+				// Both layers edge to edge, so the tile's own rounded shape is the icon's shape.
+				val painter = remember(context, res) {
+					val adaptive = ContextCompat.getDrawable(context, res) as AdaptiveIconDrawable
+					DrawablePainter(LayerDrawable(arrayOf(adaptive.background, adaptive.foreground)))
+				}
+				PreviewTile(
+					label = stringResource(labels[icon.ordinal]),
+					selected = icon.name == selected,
+					enabled = true,
+					onClick = {
+						haptic(HapticEffect.CONFIRM)
+						onSelect(icon.name)
+					},
+					aspectRatio = 1f,
+					modifier = Modifier
+						.weight(1f, fill = false)
+						.widthIn(max = 64.dp),
+				) {
+					Image(
+						painter = painter,
+						contentDescription = null,
+						modifier = Modifier.matchParentSize(),
+					)
+				}
 			}
 		}
 	}

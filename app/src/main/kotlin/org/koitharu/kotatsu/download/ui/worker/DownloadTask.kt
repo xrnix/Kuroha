@@ -16,6 +16,7 @@ class DownloadTask(
 	val destination: File?,
 	val format: DownloadFormat?,
 	val allowMeteredNetwork: Boolean,
+	val priority: Int = PRIORITY_NORMAL,
 ) : Parcelable {
 
 	constructor(data: Data) : this(
@@ -26,6 +27,7 @@ class DownloadTask(
 		destination = data.getString(DESTINATION)?.let { File(it) },
 		format = data.getString(FORMAT)?.let { DownloadFormat.entries.find(it) },
 		allowMeteredNetwork = data.getBoolean(ALLOW_METERED, true),
+		priority = data.getInt(PRIORITY, PRIORITY_NORMAL),
 	)
 
 	fun toData(): Data = Data.Builder()
@@ -35,7 +37,23 @@ class DownloadTask(
 		.putLongArray(CHAPTERS, chaptersIds ?: LongArray(0))
 		.putString(DESTINATION, destination?.path)
 		.putString(FORMAT, format?.name)
+		.putBoolean(ALLOW_METERED, allowMeteredNetwork)
+		.putInt(PRIORITY, priority)
 		.build()
+
+	fun copy(
+		isPaused: Boolean = this.isPaused,
+		priority: Int = this.priority,
+	) = DownloadTask(
+		mangaId = mangaId,
+		isPaused = isPaused,
+		isSilent = isSilent,
+		chaptersIds = chaptersIds,
+		destination = destination,
+		format = format,
+		allowMeteredNetwork = allowMeteredNetwork,
+		priority = priority,
+	)
 
 	override fun equals(other: Any?): Boolean {
 		if (this === other) return true
@@ -50,6 +68,7 @@ class DownloadTask(
 		if (destination != other.destination) return false
 		if (format != other.format) return false
 		if (allowMeteredNetwork != other.allowMeteredNetwork) return false
+		if (priority != other.priority) return false
 
 		return true
 	}
@@ -62,17 +81,22 @@ class DownloadTask(
 		result = 31 * result + (destination?.hashCode() ?: 0)
 		result = 31 * result + (format?.hashCode() ?: 0)
 		result = 31 * result + allowMeteredNetwork.hashCode()
+		result = 31 * result + priority
 		return result
 	}
 
-	private companion object {
+	companion object {
 
-		const val MANGA_ID = "manga_id"
-		const val IS_SILENT = "silent"
-		const val START_PAUSED = "paused"
-		const val CHAPTERS = "chapters"
-		const val DESTINATION = "dest"
-		const val FORMAT = "format"
-		const val ALLOW_METERED = "metered"
+		const val PRIORITY_NORMAL = 0
+		const val PRIORITY_HIGH = 1
+
+		private const val MANGA_ID = "manga_id"
+		private const val IS_SILENT = "silent"
+		private const val START_PAUSED = "paused"
+		private const val CHAPTERS = "chapters"
+		private const val DESTINATION = "dest"
+		private const val FORMAT = "format"
+		private const val ALLOW_METERED = "metered"
+		private const val PRIORITY = "priority"
 	}
 }

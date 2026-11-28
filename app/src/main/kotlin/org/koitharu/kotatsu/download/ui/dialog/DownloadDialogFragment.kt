@@ -95,6 +95,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 		var selectedOption by rememberSaveable { mutableIntStateOf(OPTION_WHOLE_MANGA) }
 		var moreExpanded by rememberSaveable { mutableStateOf(false) }
 		var startNow by rememberSaveable { mutableStateOf(true) }
+		var isHighPriority by rememberSaveable { mutableStateOf(false) }
 		var formatIndex by rememberSaveable { mutableIntStateOf(-1) }
 		var destinationIndex by rememberSaveable { mutableIntStateOf(0) }
 
@@ -141,6 +142,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 							allowMetered = allowMetered,
 							selectedOption = selectedOption,
 							startNow = startNow,
+							isHighPriority = isHighPriority,
 							formatIndex = formatIndex,
 							destinationIndex = destinationIndex,
 						)
@@ -348,6 +350,23 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 								items = formatItems,
 								onSelect = { formatIndex = it },
 							)
+							Spacer(Modifier.height(8.dp))
+							Row(
+								modifier = Modifier
+									.fillMaxWidth()
+									.heightIn(min = 44.dp)
+									.clickable { isHighPriority = !isHighPriority }
+									.padding(horizontal = 4.dp, vertical = 4.dp),
+								verticalAlignment = Alignment.CenterVertically,
+							) {
+								Text(
+									text = stringResource(R.string.download_high_priority),
+									style = MaterialTheme.typography.bodyMedium,
+									color = colors.onSurface,
+									modifier = Modifier.weight(1f),
+								)
+								Switch(checked = isHighPriority, onCheckedChange = { isHighPriority = it })
+							}
 						}
 					}
 				}
@@ -436,6 +455,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 		allowMetered: Boolean,
 		selectedOption: Int,
 		startNow: Boolean,
+		isHighPriority: Boolean,
 		formatIndex: Int,
 		destinationIndex: Int,
 	) {
@@ -453,6 +473,7 @@ class DownloadDialogFragment : ComposeAlertDialogFragment() {
 			format = DownloadFormat.entries.getOrNull(formatIndex),
 			destination = viewModel.availableDestinations.value.getOrNull(destinationIndex),
 			allowMetered = allowMetered,
+			isHighPriority = isHighPriority,
 		)
 	}
 

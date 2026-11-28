@@ -33,6 +33,7 @@ class TypedListSpacingDecoration(
 			ListItemType.FILTER_STATE,
 			ListItemType.FILTER_LANGUAGE,
 			ListItemType.QUICK_FILTER,
+			ListItemType.HOME_HEADER,
 				-> outRect.set(0)
 
 			ListItemType.HEADER,

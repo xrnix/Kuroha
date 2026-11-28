@@ -62,4 +62,8 @@
 	<color name="launcher_expressive_dark_fg">#ABC7FF</color>
 	<color name="launcher_expressive_light_bg">#F9F9FF</color>
 	<color name="launcher_expressive_light_fg">#0059C8</color>
+	<color name="launcher_kuroha_dark_bg">#141218</color>
+	<color name="launcher_kuroha_dark_fg">#D0BCFF</color>
+	<color name="launcher_kuroha_light_bg">#FEF7FF</color>
+	<color name="launcher_kuroha_light_fg">#6750A4</color>
 </resources>

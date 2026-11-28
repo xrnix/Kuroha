@@ -408,9 +408,15 @@ class ReaderActivity :
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         // Auto double-page on foldable when device is unfolded (half-opened or flat)
         val autoFoldable = settings.isReaderDoubleOnFoldable && isFoldUnfolded
-        val manualLandscape = (manualEnabled ?: settings.isReaderDoubleOnLandscape) && isLandscape
-        val autoEnabled = autoFoldable || manualLandscape
+        val enabled = manualEnabled ?: settings.isReaderDoubleOnLandscape
+        val manualActive = enabled && (!settings.isReaderDoubleLandscapeOnly || isLandscape)
+        val autoEnabled = autoFoldable || manualActive
         readerManager.setDoubleReaderMode(autoEnabled)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyDoubleModeAuto()
     }
 
     private fun setKeepScreenOn(isKeep: Boolean) {
@@ -750,27 +756,13 @@ class ReaderActivity :
     }
 
     private fun askForIncognitoMode() {
-        buildAlertDialog(this, isCentered = true) {
-            var dontAskAgain = false
-            val listener = DialogInterface.OnClickListener { _, which ->
-                if (which == DialogInterface.BUTTON_NEUTRAL) {
-                    finishAfterTransition()
-                } else {
-                    viewModel.setIncognitoMode(which == DialogInterface.BUTTON_POSITIVE, dontAskAgain)
-                }
-            }
-            setCheckbox(R.string.dont_ask_again, dontAskAgain) { _, isChecked ->
-                dontAskAgain = isChecked
-            }
-            setIcon(R.drawable.ic_incognito)
-            setTitle(R.string.incognito_mode)
-            setMessage(R.string.incognito_mode_hint_nsfw)
-            setPositiveButton(R.string.incognito, listener)
-            setNegativeButton(R.string.disable, listener)
-            setNeutralButton(android.R.string.cancel, listener)
-            setOnCancelListener { finishAfterTransition() }
-            setCancelable(true)
-        }.show()
+        showIncognitoModeDialog(
+            activity = this,
+            onResult = { incognito, dontAskAgain ->
+                viewModel.setIncognitoMode(incognito, dontAskAgain)
+            },
+            onCancel = { finishAfterTransition() },
+        )
     }
 
     companion object {

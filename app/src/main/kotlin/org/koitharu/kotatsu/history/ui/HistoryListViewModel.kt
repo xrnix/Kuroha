@@ -27,6 +27,8 @@ import org.koitharu.kotatsu.history.data.HistoryRepository
 import org.koitharu.kotatsu.history.domain.HistoryListQuickFilter
 import org.koitharu.kotatsu.history.domain.MarkAsReadUseCase
 import org.koitharu.kotatsu.history.domain.model.MangaWithHistory
+import org.koitharu.kotatsu.stats.data.StatsRepository
+import org.koitharu.kotatsu.stats.domain.StatsPeriod
 import org.koitharu.kotatsu.list.domain.ListFilterOption
 import org.koitharu.kotatsu.list.domain.ListSortOrder
 import org.koitharu.kotatsu.list.domain.MangaListMapper
@@ -60,6 +62,7 @@ class HistoryListViewModel @Inject constructor(
 	private val markAsReadUseCase: MarkAsReadUseCase,
 	private val quickFilter: HistoryListQuickFilter,
 	private val screenSearchQuery: ScreenSearchQuery,
+	private val statsRepository: StatsRepository,
 	mangaDataRepository: MangaDataRepository,
 	@LocalStorageChanges localStorageChanges: SharedFlow<LocalManga?>,
 ) : MangaListViewModel(settings, mangaDataRepository, localStorageChanges), QuickFilterListener by quickFilter {
@@ -92,19 +95,56 @@ class HistoryListViewModel @Inject constructor(
 		valueProducer = { isStatsEnabled },
 	)
 
+	private val homeStats = MutableStateFlow(0L to 0)
+
+	private val headerModel = combine(
+		homeStats,
+		isStatsEnabled,
+	) { (todayDurationMs, streakDays), statsEnabled ->
+		HomeHeaderModel(
+			todayDurationMs = todayDurationMs,
+			streakDays = streakDays,
+			isStatsVisible = statsEnabled,
+		)
+	}
+
+	init {
+		refreshHomeStats()
+	}
+
 	override val content = combine(
+		headerModel,
 		quickFilter.appliedOptions,
 		observeHistory(),
 		isGroupingEnabled,
 		observeListModeWithTriggers(),
 		settings.observeAsFlow(AppSettings.KEY_INCOGNITO_MODE) { isIncognitoModeEnabled },
-	) { filters, list, grouped, mode, incognito ->
-		mapList(list, grouped, mode, filters, incognito)
+	) { values ->
+		@Suppress("UNCHECKED_CAST")
+		val header = values[0] as HomeHeaderModel
+		@Suppress("UNCHECKED_CAST")
+		val filters = values[1] as Set<ListFilterOption>
+		@Suppress("UNCHECKED_CAST")
+		val list = values[2] as List<MangaWithHistory>
+		val grouped = values[3] as Boolean
+		val mode = values[4] as ListMode
+		val incognito = values[5] as Boolean
+		mapList(header, list, grouped, mode, filters, incognito)
 	}.distinctUntilChanged().onEach {
 		isPaginationReady.set(true)
 	}.catch { e ->
 		emit(listOf(e.toErrorState(canRetry = false)))
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
+
+	fun refreshHomeStats() {
+		if (!isStatsEnabled.value) return
+		launchJob(Dispatchers.Default) {
+			val snapshot = runCatching { statsRepository.getStatsSnapshot(StatsPeriod.DAY, emptySet()) }.getOrNull()
+			if (snapshot != null) {
+				homeStats.value = snapshot.totalDuration to snapshot.currentStreak
+			}
+		}
+	}
 
 	override fun onRefresh() = Unit
 
@@ -169,6 +209,7 @@ class HistoryListViewModel @Inject constructor(
 	}
 
 	private suspend fun mapList(
+		headerModel: HomeHeaderModel,
 		list: List<MangaWithHistory>,
 		grouped: Boolean,
 		mode: ListMode,
@@ -180,12 +221,13 @@ class HistoryListViewModel @Inject constructor(
 			// just searched reads as if their history was wiped.
 			val hasFilters = filters.isNotEmpty() || screenSearchQuery.query(SearchSuggestionScope.HISTORY).value.isNotEmpty()
 			return if (!hasFilters) {
-				listOf(getEmptyState(hasFilters = false))
+				listOf(headerModel, getEmptyState(hasFilters = false))
 			} else {
-				listOfNotNull(quickFilter.filterItem(filters), getEmptyState(hasFilters = true))
+				listOfNotNull(headerModel, quickFilter.filterItem(filters), getEmptyState(hasFilters = true))
 			}
 		}
-		val result = ArrayList<ListModel>((if (grouped) (list.size * 1.4).toInt() else list.size) + 2)
+		val result = ArrayList<ListModel>((if (grouped) (list.size * 1.4).toInt() else list.size) + 3)
+		result += headerModel
 		quickFilter.filterItem(filters)?.let(result::add)
 		if (isIncognito) {
 			result += InfoModel(

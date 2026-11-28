@@ -23,6 +23,7 @@ object SyncTriggers {
 	const val STATS = "stats"
 	const val FEED = "track_logs"
 	const val MANGA_PREFS = "preferences"
+	const val SOURCES = "sources"
 
 	private class Tracked(
 		val table: String,
@@ -97,6 +98,12 @@ object SyncTriggers {
 			),
 			isSoftDelete = false,
 		),
+		Tracked(
+			table = SOURCES,
+			pk = "%.source",
+			columns = listOf("enabled", "sort_key", "pinned"),
+			isSoftDelete = false,
+		),
 	)
 
 	/** Idempotent; runs on every open so a fresh install and an upgraded install end up identical. */
@@ -133,6 +140,7 @@ object SyncTriggers {
 				db.execSQL("CREATE TRIGGER IF NOT EXISTS sync_${t.table}_del AFTER DELETE ON ${t.table} BEGIN $tombstone END")
 			}
 		}
+		db.execSQL("INSERT OR IGNORE INTO sync_rows SELECT '$SOURCES', source, 0, 0, NULL FROM sources")
 	}
 
 	/**

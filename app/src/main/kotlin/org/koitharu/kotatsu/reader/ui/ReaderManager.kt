@@ -25,7 +25,8 @@ class ReaderManager(
 	private val modeMap = EnumMap<ReaderMode, Class<out BaseReaderFragment<*>>>(ReaderMode::class.java)
 
 	init {
-		val useDoublePages = isLandscape() && settings.isReaderDoubleOnLandscape
+		val useDoublePages = settings.isReaderDoubleOnLandscape &&
+			(!settings.isReaderDoubleLandscapeOnly || isLandscape())
 		invalidateTypesMap(useDoublePages)
 	}
 

@@ -89,6 +89,7 @@ class DownloadDialogViewModel @Inject constructor(
 		format: DownloadFormat?,
 		destination: DirectoryModel?,
 		allowMetered: Boolean,
+		isHighPriority: Boolean = false,
 	) {
 		launchLoadingJob(Dispatchers.Default) {
 			val tasks = mangaDetails.get().map { m ->
@@ -101,6 +102,7 @@ class DownloadDialogViewModel @Inject constructor(
 					destination = destination?.file,
 					format = format,
 					allowMeteredNetwork = allowMetered,
+					priority = if (isHighPriority) DownloadTask.PRIORITY_HIGH else DownloadTask.PRIORITY_NORMAL,
 				)
 			}
 			scheduler.schedule(tasks)

@@ -228,6 +228,15 @@ private fun AboutScreen(
 			SettingsGroup(title = "Links") {
 				item { pos ->
 					ActionSettingsItem(
+						title = stringResource(R.string.website),
+						subtitle = stringResource(R.string.url_website),
+						icon = R.drawable.ic_open_external,
+						shape = pos.shape,
+						onClick = { onOpenLink(R.string.url_website, R.string.website) },
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
 						title = stringResource(R.string.user_manual),
 						subtitle = stringResource(R.string.url_user_manual),
 						icon = R.drawable.ic_book_page,
@@ -242,6 +251,24 @@ private fun AboutScreen(
 						icon = R.drawable.ic_open_external,
 						shape = pos.shape,
 						onClick = { onOpenLink(R.string.url_github, R.string.source_code) },
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.privacy_policy),
+						subtitle = stringResource(R.string.url_privacy_policy),
+						icon = R.drawable.ic_info_outline,
+						shape = pos.shape,
+						onClick = { onOpenLink(R.string.url_privacy_policy, R.string.privacy_policy) },
+					)
+				}
+				item { pos ->
+					ActionSettingsItem(
+						title = stringResource(R.string.terms_of_service),
+						subtitle = stringResource(R.string.url_terms),
+						icon = R.drawable.ic_info_outline,
+						shape = pos.shape,
+						onClick = { onOpenLink(R.string.url_terms, R.string.terms_of_service) },
 					)
 				}
 			}

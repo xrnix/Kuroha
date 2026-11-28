@@ -17,7 +17,7 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 	@Query(
 		"""
 		SELECT * FROM tracks
-		WHERE last_check_time = 0
+		WHERE (last_check_time = 0
 			OR last_check_time <= :staleCheckTime
 			OR last_chapter_date = 0
 			OR last_chapter_date >= :minActivityTime
@@ -32,12 +32,27 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 				WHERE favourites.manga_id = tracks.manga_id
 					AND favourites.deleted_at = 0
 					AND favourites.created_at >= :minActivityTime
-			)
+			))
+			AND (NOT :skipCompleted OR manga_id NOT IN (SELECT manga_id FROM manga WHERE state = 'FINISHED'))
+			AND (NOT :skipUnstarted OR manga_id IN (SELECT manga_id FROM history WHERE deleted_at = 0 AND percent > 0))
+			AND (NOT :skipUnread OR IFNULL(chapters_new, 0) = 0)
 		ORDER BY last_check_time ASC
 		LIMIT :limit OFFSET :offset
 		""",
 	)
-	abstract suspend fun findAll(offset: Int, limit: Int, minActivityTime: Long, staleCheckTime: Long): List<TrackWithManga>
+	abstract suspend fun findAll(
+		offset: Int,
+		limit: Int,
+		minActivityTime: Long,
+		staleCheckTime: Long,
+		skipCompleted: Boolean = false,
+		skipUnstarted: Boolean = false,
+		skipUnread: Boolean = false,
+	): List<TrackWithManga>
+
+	@Transaction
+	@Query("SELECT * FROM tracks WHERE last_chapter_date > 0 ORDER BY last_chapter_date DESC")
+	abstract suspend fun findAllWithLastChapter(): List<TrackWithManga>
 
 	@Transaction
 	@Query("SELECT * FROM tracks ORDER BY last_check_time DESC")

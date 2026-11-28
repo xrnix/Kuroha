@@ -29,6 +29,11 @@ class FeedMenuProvider(
 	}
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
+		R.id.action_release_calendar -> {
+			org.koitharu.kotatsu.core.nav.AppRouter.from(snackbarHost)?.openReleaseCalendar()
+			true
+		}
+
 		R.id.action_update -> {
 			viewModel.update()
 			true

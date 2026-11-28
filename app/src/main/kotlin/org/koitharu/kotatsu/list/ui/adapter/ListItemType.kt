@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.list.ui.adapter
 enum class ListItemType {
 
 	QUICK_FILTER,
+	HOME_HEADER,
 	FILTER_SORT,
 	FILTER_TAG,
 	FILTER_TAG_MULTI,

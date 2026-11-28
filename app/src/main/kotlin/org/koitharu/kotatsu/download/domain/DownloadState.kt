@@ -22,6 +22,7 @@ data class DownloadState(
 	val localManga: LocalManga? = null,
 	val downloadedChapters: Int = 0,
 	val timestamp: Long = System.currentTimeMillis(),
+	val priority: Int = 0,
 ) {
 
 	val max: Int = totalChapters * totalPages
@@ -47,6 +48,7 @@ data class DownloadState(
 		.putInt(DATA_CHAPTERS, downloadedChapters)
 		.putBoolean(DATA_INDETERMINATE, isIndeterminate)
 		.putBoolean(DATA_PAUSED, isPaused)
+		.putInt(DATA_PRIORITY, priority)
 		.build()
 
 	companion object {
@@ -61,6 +63,7 @@ data class DownloadState(
 		private const val DATA_ERROR = "error"
 		private const val DATA_INDETERMINATE = "indeterminate"
 		private const val DATA_PAUSED = "paused"
+		private const val DATA_PRIORITY = "priority"
 
 		fun getMangaId(data: Data): Long = data.getLong(DATA_MANGA_ID, 0L)
 
@@ -81,5 +84,7 @@ data class DownloadState(
 		fun getTimestamp(data: Data): Instant = Instant.ofEpochMilli(data.getLong(DATA_TIMESTAMP, 0L))
 
 		fun getDownloadedChapters(data: Data): Int = data.getInt(DATA_CHAPTERS, 0)
+
+		fun getPriority(data: Data): Int = data.getInt(DATA_PRIORITY, 0)
 	}
 }

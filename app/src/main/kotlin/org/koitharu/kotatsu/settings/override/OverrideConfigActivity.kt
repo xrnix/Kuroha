@@ -3,39 +3,73 @@ package org.koitharu.kotatsu.settings.override
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.core.text.parseAsHtml
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
+import androidx.core.view.updatePaddingRelative
+import coil3.ImageLoader
+import kotlinx.coroutines.flow.filterNotNull
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.filterNotNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.ui.BaseActivity
-import org.koitharu.kotatsu.alternatives.ui.covers.AlternativeCoversActivity
-import org.koitharu.kotatsu.core.ui.model.MangaOverride
-import org.koitharu.kotatsu.core.util.ext.consumeAll
+import org.koitharu.kotatsu.core.ui.dialog.showTextInputDialog
+import org.koitharu.kotatsu.core.util.ext.end
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
+import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.core.util.ext.tryLaunch
 import org.koitharu.kotatsu.databinding.ActivityOverrideEditBinding
-import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
-import com.google.android.material.R as materialR
+import org.koitharu.kotatsu.picker.ui.PageImagePickContract
+import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
+import org.koitharu.kotatsu.settings.compose.KurohaTheme
+import javax.inject.Inject
 
+/**
+ * Hosts [OverrideEditScreen]. The activity owns only the window: the toolbar with its Save action,
+ * the system pickers a cover can come from, and the typed text, which lives here so Save can read
+ * it without the screen having to push every keystroke into the view model.
+ */
 @AndroidEntryPoint
-class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), View.OnClickListener,
-	ActivityResultCallback<Uri?> {
+class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), ActivityResultCallback<Uri?> {
+
+	@Inject
+	lateinit var coil: ImageLoader
 
 	private val viewModel: OverrideConfigViewModel by viewModels()
 
+	private val bottomInset = mutableIntStateOf(0)
+	private val isImportSheetShown = mutableStateOf(false)
+	private val titleText = mutableStateOf<String?>(null)
+	private val descriptionText = mutableStateOf<String?>(null)
+	private val errorText = mutableStateOf<String?>(null)
+
 	private val pickCoverFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument(), this)
-	private val pickAlternativeCoverLauncher = registerForActivityResult(AlternativeCoversActivity.Contract()) { url ->
-		if (url != null) {
-			viewModel.updateCover(url)
+	private val pickPageLauncher = registerForActivityResult(PageImagePickContract(), this)
+
+	// The photo picker grants temporary read access (no persistable permission), which lasts long
+	// enough for the cover to be copied into app storage when the override is saved.
+	private val pickCoverGalleryLauncher = registerForActivityResult(
+		ActivityResultContracts.PickVisualMedia(),
+	) { uri ->
+		if (uri != null) {
+			viewModel.updateCover(uri.toString())
 		}
 	}
 
@@ -43,27 +77,131 @@ class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), View
 		super.onCreate(savedInstanceState)
 		setContentView(ActivityOverrideEditBinding.inflate(layoutInflater))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
-		viewBinding.buttonDone.setOnClickListener(this)
-		viewBinding.buttonPickFile.setOnClickListener(this)
-		viewBinding.buttonPickAlternative.setOnClickListener(this)
-		viewBinding.buttonResetCover.setOnClickListener(this)
-		viewBinding.layoutName.setEndIconOnClickListener(this)
-		viewModel.data.filterNotNull().observe(this, ::onDataChanged)
-		viewModel.onSaved.observeEvent(this) { onDataSaved() }
-		viewModel.isLoading.observe(this, ::onLoadingStateChanged)
-		viewModel.onError.observeEvent(this, ::onError)
+		setTitle(R.string.edit)
+		viewBinding.composeView.setViewCompositionStrategy(
+			ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed,
+		)
+		viewBinding.composeView.setContent {
+			KurohaTheme {
+				val density = LocalDensity.current
+				val data by viewModel.data.collectAsState()
+				val isLoading by viewModel.isLoading.collectAsState()
+				data?.let { (manga, override) ->
+					OverrideEditScreen(
+						manga = manga,
+						coverUrl = override.coverUrl,
+						title = titleText.value.orEmpty(),
+						description = descriptionText.value.orEmpty(),
+						originalDescription = remember(manga) {
+							manga.description?.parseAsHtml()?.toString()?.trim()
+						},
+						isLoading = isLoading,
+						error = errorText.value,
+						bottomInset = with(density) { bottomInset.intValue.toDp() },
+						imageLoader = coil,
+						onTitleChange = { titleText.value = it },
+						onDescriptionChange = { descriptionText.value = it },
+						onCoverPick = ::onCoverPick,
+						onCoverReset = { viewModel.updateCover(null) },
+					)
+					val trackers by viewModel.trackers.collectAsState()
+					if (isImportSheetShown.value) {
+						TrackerImportSheet(
+							manga = manga,
+							trackers = trackers,
+							imageLoader = coil,
+							onImport = { tracker, fields ->
+								applyImport(tracker, fields)
+								isImportSheetShown.value = false
+							},
+							onDismiss = { isImportSheetShown.value = false },
+						)
+					}
+				}
+			}
+		}
+		// Seed the fields from the stored override once; a later re-emission must never overwrite
+		// what is being typed.
+		viewModel.data.filterNotNull().observe(this) { (_, override) ->
+			if (titleText.value == null) {
+				titleText.value = override.title.orEmpty()
+				descriptionText.value = ""
+			}
+		}
+		viewModel.onSaved.observeEvent(this) {
+			setResult(RESULT_OK)
+			finish()
+		}
+		viewModel.onError.observeEvent(this) { errorText.value = it.getDisplayMessage(resources) }
+		viewModel.trackers.observe(this) { invalidateOptionsMenu() }
+	}
+
+	override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+		menuInflater.inflate(R.menu.opt_override_edit, menu)
+		menu?.findItem(R.id.action_done)?.actionView?.setOnClickListener { save() }
+		return super.onCreateOptionsMenu(menu)
+	}
+
+	override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+		// Greyed out while there is nothing to import from — but still tappable, so a tap can say
+		// why instead of doing nothing. A disabled item would keep its full-strength icon anyway.
+		val hasTrackers = viewModel.trackers.value.isNotEmpty()
+		menu.findItem(R.id.action_import)?.icon?.alpha = if (hasTrackers) 255 else 97
+		return super.onPrepareOptionsMenu(menu)
+	}
+
+	override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+		R.id.action_done -> {
+			save()
+			true
+		}
+
+		R.id.action_import -> {
+			if (viewModel.trackers.value.isEmpty()) {
+				Snackbar.make(
+					viewBinding.composeView,
+					R.string.import_from_tracker_empty,
+					Snackbar.LENGTH_SHORT,
+				).show()
+			} else {
+				isImportSheetShown.value = true
+			}
+			true
+		}
+
+		else -> super.onOptionsItemSelected(item)
+	}
+
+	/** Fills the editor with the tracker's values; saving them stays the user's call. */
+	private fun applyImport(tracker: ScrobblingInfo, fields: Set<ImportField>) {
+		if (ImportField.COVER in fields) {
+			viewModel.updateCover(tracker.coverUrl)
+		}
+		if (ImportField.TITLE in fields) {
+			titleText.value = tracker.title
+		}
+		if (ImportField.DESCRIPTION in fields) {
+			descriptionText.value = tracker.description?.toString().orEmpty()
+		}
+	}
+
+	private fun save() {
+		errorText.value = null
+		viewModel.save(
+			title = titleText.value?.trim(),
+			description = descriptionText.value?.trim(),
+		)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-		val typeMask = WindowInsetsCompat.Type.systemBars()
-		val barsInsets = insets.getInsets(typeMask)
-		viewBinding.root.setPadding(
-			barsInsets.left,
-			barsInsets.top,
-			barsInsets.right,
-			barsInsets.bottom,
+		val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+		viewBinding.appbar.updatePaddingRelative(
+			start = bars.start(v),
+			top = bars.top,
+			end = bars.end(v),
 		)
-		return insets.consumeAll(typeMask)
+		bottomInset.intValue = bars.bottom
+		return insets
 	}
 
 	override fun onActivityResult(result: Uri?) {
@@ -75,57 +213,46 @@ class OverrideConfigActivity : BaseActivity<ActivityOverrideEditBinding>(), View
 		}
 	}
 
-	override fun onClick(v: View) {
-		when (v.id) {
-			R.id.button_done -> viewModel.save(
-				title = viewBinding.editName.text?.toString()?.trim(),
-			)
-
-			materialR.id.text_input_end_icon -> viewBinding.editName.text?.clear()
-
-			R.id.button_reset_cover -> viewModel.updateCover(null)
-			R.id.button_pick_file -> {
-				if (!pickCoverFileLauncher.tryLaunch(arrayOf("image/*"))) {
-					Snackbar.make(
-						viewBinding.imageViewCover,
-						R.string.operation_not_supported,
-						Snackbar.LENGTH_SHORT,
-					).show()
-				}
+	private fun onCoverPick(source: CoverSource) {
+		when (source) {
+			CoverSource.GALLERY -> if (
+				!pickCoverGalleryLauncher.tryLaunch(
+					PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+				)
+			) {
+				showNotSupported()
 			}
 
-			R.id.button_pick_alternative -> {
-				viewModel.data.value?.first?.let(pickAlternativeCoverLauncher::launch)
+			CoverSource.FILE -> if (!pickCoverFileLauncher.tryLaunch(arrayOf("image/*"))) {
+				showNotSupported()
+			}
+
+			CoverSource.PAGE -> pickPageLauncher.launch(viewModel.data.value?.first)
+
+			CoverSource.URL -> showCoverUrlDialog()
+		}
+	}
+
+	private fun showNotSupported() {
+		Snackbar.make(viewBinding.composeView, R.string.operation_not_supported, Snackbar.LENGTH_SHORT).show()
+	}
+
+	private fun showCoverUrlDialog() {
+		showTextInputDialog(
+			context = this,
+			icon = R.drawable.ic_images,
+			title = getString(R.string.pick_cover_url),
+			initialValue = viewModel.data.value?.second?.coverUrl?.takeIf { it.isHttpUrl() }.orEmpty(),
+			hint = getString(R.string.url),
+			keyboardType = KeyboardType.Uri,
+			isValid = { true },
+		) { text ->
+			val url = text.trim()
+			if (url.isHttpUrl()) {
+				viewModel.updateCover(url)
+			} else {
+				Snackbar.make(viewBinding.composeView, R.string.invalid_url, Snackbar.LENGTH_SHORT).show()
 			}
 		}
-	}
-
-	private fun onDataChanged(data: Pair<Manga, MangaOverride>) {
-		val (manga, override) = data
-		viewBinding.imageViewCover.setImageAsync(override.coverUrl.ifNullOrEmpty { manga.coverUrl }, manga)
-		viewBinding.layoutName.placeholderText = manga.title
-		if (viewBinding.editName.tag == null) {
-			viewBinding.editName.setText(override.title)
-			viewBinding.editName.tag = override.title
-		}
-		viewBinding.buttonResetCover.isEnabled = !override.coverUrl.isNullOrEmpty()
-	}
-
-	private fun onError(e: Throwable) {
-		viewBinding.textViewError.text = e.getDisplayMessage(resources)
-		viewBinding.textViewError.isVisible = true
-	}
-
-	private fun onLoadingStateChanged(isLoading: Boolean) {
-		viewBinding.buttonDone.isEnabled = !isLoading
-		viewBinding.editName.isEnabled = !isLoading
-		if (isLoading) {
-			viewBinding.textViewError.isVisible = false
-		}
-	}
-
-	private fun onDataSaved() {
-		setResult(RESULT_OK)
-		finish()
 	}
 }
