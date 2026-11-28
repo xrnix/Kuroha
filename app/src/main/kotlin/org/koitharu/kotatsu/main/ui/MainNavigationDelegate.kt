@@ -36,6 +36,7 @@ import org.koitharu.kotatsu.core.prefs.NavItem
 import org.koitharu.kotatsu.core.ui.util.PredictiveBackCallback
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
 import org.koitharu.kotatsu.core.ui.widgets.FloatingBottomNavigationView
+import org.koitharu.kotatsu.core.ui.widgets.FloatingNavRailView
 import org.koitharu.kotatsu.core.ui.widgets.SlidingBottomNavigationView
 import org.koitharu.kotatsu.core.util.ext.HapticEffect
 import org.koitharu.kotatsu.core.util.ext.buildBundle
@@ -137,6 +138,7 @@ class MainNavigationDelegate(
 			floating.setComposeLabeled(settings.isNavLabelsVisible)
 			floating.setUseLegacyNavigation(settings.isLegacyNavigationBar)
 		}
+		(navBar as? FloatingNavRailView)?.setComposeItems(settings.mainNavItems)
 		observeSettings(lifecycleOwner)
 		val fragment = primaryFragment
 		if (fragment != null) {
@@ -185,12 +187,14 @@ class MainNavigationDelegate(
 			navBar.getOrCreateBadge(id).number = counter
 		}
 		(navBar as? FloatingBottomNavigationView)?.setComposeBadge(id, counter)
+		(navBar as? FloatingNavRailView)?.setComposeBadge(id, counter)
 	}
 
 	fun setItemVisibility(@IdRes id: Int, isVisible: Boolean) {
 		val item = navBar.menu.findItem(id) ?: return
 		item.isVisible = isVisible
 		(navBar as? FloatingBottomNavigationView)?.setComposeItemVisibility(id, isVisible)
+		(navBar as? FloatingNavRailView)?.setComposeItemVisibility(id, isVisible)
 		if (item.isChecked && !isVisible) {
 			navBar.selectedItemId = firstItem()?.itemId ?: return
 		}

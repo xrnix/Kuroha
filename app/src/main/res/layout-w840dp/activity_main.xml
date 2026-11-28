@@ -8,24 +8,21 @@
     android:orientation="horizontal"
     tools:context=".main.ui.MainActivity">
 
-    <com.google.android.material.navigationrail.NavigationRailView
-        android:id="@+id/navRail"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:fitsSystemWindows="false"
-        app:headerLayout="@layout/navigation_rail_fab"
-        app:labelVisibilityMode="labeled"
-        app:paddingBottomSystemWindowInsets="false"
-        app:paddingStartSystemWindowInsets="false"
-        app:paddingTopSystemWindowInsets="false"
-        app:scrollingEnabled="true" />
-
     <View
         android:id="@+id/foldHingeSpacer"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:visibility="gone" />
+
+    <!-- Floating vertical pill nav rail — side-mounted twin of the phone's floating bottom bar -->
+    <org.koitharu.kotatsu.core.ui.widgets.FloatingNavRailView
+        android:id="@+id/navRail"
+        android:layout_width="86dp"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:fitsSystemWindows="false"
+        android:clipChildren="false"
+        android:clipToPadding="false" />
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="0dp"

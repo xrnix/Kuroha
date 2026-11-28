@@ -210,9 +210,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.statusBarScrim.background = StatusBarScrim.drawable(this)
 
 		viewBinding.fab?.setOnClickListener(this)
-		viewBinding.navRail?.headerView?.findViewById<View>(R.id.railFab)?.setOnClickListener(this)
 		viewBinding.bottomNav?.setOnContinueClickListener { viewModel.openLastReader() }
 		viewBinding.bottomNav?.setOnContinueLongClickListener { viewModel.openLastDetails() }
+		viewBinding.navRail?.setOnContinueClickListener { viewModel.openLastReader() }
+		viewBinding.navRail?.setOnContinueLongClickListener { viewModel.openLastDetails() }
 		viewBinding.buttonOverflow.setOnClickListener(this::showMainOverflowMenu)
 		viewBinding.buttonSources.setOnClickListener {
 			startActivity(android.content.Intent(this, SourcesActivity::class.java))
@@ -548,15 +549,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			navigationDelegate.primaryFragment
 		}
 
-		val useFloatingContinue = viewBinding.bottomNav != null && !settings.isLegacyNavigationBar
+		val useFloatingContinue = (viewBinding.bottomNav != null || viewBinding.navRail != null) && !settings.isLegacyNavigationBar
 		if (!useFloatingContinue && isResumeEnabled && !actionModeDelegate.isActionModeStarted &&
-			!isSearchOpened && (viewBinding.navRail != null || fragment is HistoryListFragment)
+			!isSearchOpened && fragment is HistoryListFragment
 		) {
 			showMainFab("continue", ::configureContinueFab)
 		} else {
 			hideMainFab()
 		}
 		viewBinding.bottomNav?.setContinueVisible(useFloatingContinue && isResumeEnabled)
+		viewBinding.navRail?.setContinueVisible(useFloatingContinue && isResumeEnabled)
 	}
 
 	private fun showMainFab(
